@@ -1,7 +1,7 @@
 #**********************************************************************
 # Berufsakademie Ravensburg - Praktikum Verteilte Kommunikationssysteme
 #
-# $Id: Makefile,v 1.1 2002/10/13 19:10:29 ralf Exp $
+# $Id: Makefile,v 1.2 2004/12/29 20:18:33 ralf Exp $
 #
 #**********************************************************************
 
@@ -19,7 +19,7 @@ SRC = echod.c
 LIBS = libsockets/libsockets.a 
 
 .PHONY : all
-all : echod
+all : $(LIBS) echod
 
 %.pdf : %.ps
 	$(PS2PDF) $< $@
@@ -27,11 +27,11 @@ all : echod
 %.ps : %.c
 	$(A2PS) $< $(AOPT) -o $@
 
-echod : echod.o $(LIBS)
-	$(CC) -o $@ echod.o $(LIBS) -lpthread
-
 libsockets/libsockets.a:
 	$(MAKE) -C libsockets
+
+echod : echod.o $(LIBS)
+	$(CC) -o $@ echod.o $(LIBS) -lpthread
 
 
 .PHONY: depend
