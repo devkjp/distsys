@@ -1,3 +1,9 @@
+/*
+ * connect_tcp.h
+ *
+ * $Id:$
+ *
+ */
 
 #ifndef _CONNECT_TCP_H
 #define _CONNECT_TCP_H

@@ -1,3 +1,9 @@
+/*
+ * passive_tcp.h
+ *
+ * $Id:$
+ *
+ */
 
 #ifndef _PASSIVE_TCP_H
 #define _PASSIVE_TCP_H

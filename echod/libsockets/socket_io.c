@@ -1,4 +1,9 @@
-
+/*
+ * socket_io.c
+ *
+ * $Id:$
+ *
+ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -65,29 +70,21 @@ write_to_socket (int fd, char *buf, int len, int timeout)
      keeps trying it until all was written, or an error occurred.  The
      inner loop is reserved for the usual EINTR f*kage, and the
      innermost loop deals with the same during select().  */
-  printf("write_to_socket s\n");
   while (len > 0) {
     do {
       if (timeout) {
 	do {
-	  printf("write_to_socket select 1\n");
 	  res = select_socket_fd (fd, timeout, 1);
-	  printf("write_to_socket select 2\n");
 	} while (res == -1 && errno == EINTR);
 	if (res <= 0) {
 	  return -1;
 	} /* end if */
       }
-      printf("write_to_socket write, len=%d, res=%d\n", len, res);
-      fflush(stdout);
       res = write(fd, buf, len);
-      printf("write_to_socket write 2\n");
-      fflush(stdout);
     } while (res == -1 && errno == EINTR);
     if (res <= 0) break;
     buf += res;
     len -= res;
   } /* end while */
-  printf("write_to_socket e\n");
   return res;
 } /* end of write_to_socket */

@@ -1,3 +1,9 @@
+/*
+ * socket_io.h
+ *
+ * $Id:$
+ *
+ */
 
 #ifndef _SOCKET_IO_H
 #define _SOCKET_IO_H

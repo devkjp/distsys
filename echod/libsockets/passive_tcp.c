@@ -1,4 +1,9 @@
-
+/*
+ * passive_tcp.c
+ *
+ * $Id:$
+ *
+ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -10,6 +15,9 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
+
+#include "passive_tcp.h"
 
 
 unsigned short
@@ -41,7 +49,6 @@ passive_tcp(unsigned short port, int qlen)
 {
   int retcode;
   int sd;                    /* socket descriptor */
-  const int on = 1;
   struct protoent *ppe;      /* pointer to protocol information entry */
   struct sockaddr_in server;
 
@@ -68,11 +75,6 @@ passive_tcp(unsigned short port, int qlen)
     return -1;
   } /* end if */
   
-  /*
-   * Set socket options.
-   */
-  setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
-
   /*
    * Bind the socket to the provided port.
    */

@@ -1,4 +1,9 @@
-
+/*
+ * socket_info.c
+ *
+ * $Id:$
+ *
+ */
 
 #include <stdio.h>
 #include <sys/types.h>

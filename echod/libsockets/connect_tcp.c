@@ -1,4 +1,9 @@
-
+/*
+ * connect_tcp.c
+ *
+ * $Id:$
+ *
+ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -9,6 +14,9 @@
 #include <syslog.h>
 #include <netdb.h>
 #include <stdlib.h>
+#include <string.h>
+
+#include "connect_tcp.h"
 
 
 int
