@@ -1,4 +1,9 @@
-
+/*
+ * echod.c
+ *
+ * $Id:$
+ *
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,8 +18,8 @@
 #include <unistd.h>
 #include <pthread.h>
 
-#include "passive_tcp.h"
-#include "socket_io.h"
+#include "libsockets/passive_tcp.h"
+#include "libsockets/socket_io.h"
 
 
 #define BUFFER_SIZE       8192
