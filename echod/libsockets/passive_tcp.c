@@ -1,7 +1,7 @@
 /*
  * passive_tcp.c
  *
- * $Id:$
+ * $Id: passive_tcp.c,v 1.3 2004/12/29 00:37:29 ralf Exp $
  *
  */
 
@@ -51,6 +51,8 @@ passive_tcp(unsigned short port, int qlen)
   int sd;                    /* socket descriptor */
   struct protoent *ppe;      /* pointer to protocol information entry */
   struct sockaddr_in server;
+  const int on = 1;          /* used to set socket option */
+
 
   memset(&server, 0, sizeof(server));
   server.sin_family = AF_INET;
@@ -74,6 +76,11 @@ passive_tcp(unsigned short port, int qlen)
     perror("ERROR: server socket()");
     return -1;
   } /* end if */
+
+  /*
+   * Set socket options.
+   */
+  setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
   
   /*
    * Bind the socket to the provided port.
