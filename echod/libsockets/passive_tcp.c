@@ -41,6 +41,7 @@ passive_tcp(unsigned short port, int qlen)
 {
   int retcode;
   int sd;                    /* socket descriptor */
+  const int on = 1;
   struct protoent *ppe;      /* pointer to protocol information entry */
   struct sockaddr_in server;
 
@@ -67,6 +68,11 @@ passive_tcp(unsigned short port, int qlen)
     return -1;
   } /* end if */
   
+  /*
+   * Set socket options.
+   */
+  setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+
   /*
    * Bind the socket to the provided port.
    */
