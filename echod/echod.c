@@ -1,7 +1,7 @@
 /*
  * echod.c
  *
- * $Id:$
+ * $Id: echod.c,v 1.2 2004/12/29 20:18:33 ralf Exp $
  *
  */
 

@@ -1,7 +1,7 @@
 /*
  * connect_tcp.h
  *
- * $Id:$
+ * $Id: connect_tcp.h,v 1.2 2004/12/29 00:37:29 ralf Exp $
  *
  */
 

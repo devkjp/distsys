@@ -1,7 +1,7 @@
 /*
  * socket_info.h
  *
- * $Id:$
+ * $Id: socket_info.h,v 1.2 2004/12/29 00:37:29 ralf Exp $
  *
  */
 

@@ -1,7 +1,7 @@
 /*
  * socket_io.h
  *
- * $Id:$
+ * $Id: socket_io.h,v 1.2 2004/12/29 00:37:29 ralf Exp $
  *
  */
 
