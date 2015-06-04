@@ -24,19 +24,28 @@ my @tests = (
     [ "DELETE",   501 ],
     [ "TRACE",    501 ],
     [ "CONNECT",  501 ],
-    [ "DUMMY",    400 ]
+    [ "DUMMY",    501 ]
 );
 
 plan tests => scalar @tests;
 
 connect_to_server(@$_) for @tests;
 
-# List all modules included by this script
-#print join("\n", map { s|/|::|g; s|\.pm$||; $_ } keys %INC);
-
 exit 0;
 
 
+#--------------------------------------------------------------------------
+# Establish an HTTP connection to a server and perform tests on the
+# returned HTTP response
+#
+# Parameter(s):
+# (IN) Reference to a hash containing test data
+#      'method' -> HTTP method be used in HTTP request
+#      'status' -> expected HTTP status in the response
+#
+# Return value: NONE
+#
+#--------------------------------------------------------------------------
 sub connect_to_server {
     my $method = shift;
     my $status = shift;
@@ -47,11 +56,20 @@ sub connect_to_server {
                 Type     => SOCK_STREAM
     ) or die "ERROR: socket() - $@";
 
-    print $socket "$method / HTTP/1.0\r\n\r\n";
+    print $socket "$method /index.html HTTP/1.1\r\n\r\n";
 
-    my $answer = <$socket> =~ s/\R\z//r;
-    my @fields = split " ", $answer;
-    is($fields[1], $status, "Method $method: $status");
+    my  $response = <$socket>;
+    if (defined $response) {
+        my $answer = $response =~ s/\R\z//r;
+        if (defined $answer) {
+            my @fields = split " ", $answer;
+            is($fields[1], $status, "Method $method: Status $status");
+        } else {
+            fail("Method $method: response format");
+        } # end if
+    } else {
+        fail("Method $method: no response");
+    } # end if
 
     close($socket);
 } # end of connect_to_server

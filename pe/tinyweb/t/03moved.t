@@ -27,17 +27,11 @@ setlocale(LC_TIME, $locale_str) or die "Cannot set LC_TIME to '$locale_str'";
 # Test Cases
 #--------------------------------------------------------------------------
 my @tests = (
-    [ { method => 'GET',  url => "/index.html", status => 200 } ],
-    [ { method => 'HEAD', url => "/index.html", status => 200 } ],
-    [ { method => 'HEAD', url => "/images/computerhead1.gif", status => 200 } ],
-    [ { method => 'GET',  url => "/images/computerhead1.gif", status => 200 } ],
-    [ { method => 'HEAD', url => "/example.pdf", status => 200 } ],
-    [ { method => 'GET',  url => "/example.pdf", status => 200 } ],
-    [ { method => 'HEAD', url => "/css/default.css", status => 200 } ],
-    [ { method => 'GET',  url => "/css/default.css", status => 200 } ],
-    # Non-existing file
-    [ { method => 'HEAD', url => "/blablabla.html", status => 404 } ],
-    [ { method => 'GET',  url => "/blablabla.html", status => 404 } ],
+    # Redirection in case of a directory
+    [ { method => 'HEAD', url => "/css", status => 301, location => "/css/" } ],
+    [ { method => 'GET',  url => "/css", status => 301, location => "/css/" } ],
+    [ { method => 'HEAD', url => "/source", status => 301, location => "/source/" } ],
+    [ { method => 'GET',  url => "/source", status => 301, location => "/source/" } ],
 );
 
 # Set the number of test cases (excluding subtests)
@@ -78,7 +72,6 @@ sub connect_to_server {
 
     # Create a request
     my $req = HTTP::Request->new($method => "http://$remote_host:$remote_port$remote_path$url");
-    $req->header('Accept' => '*/*');
 
     # Pass request to the user agent and get a response back from the server
     my $res = $ua->request($req);
@@ -87,8 +80,7 @@ sub connect_to_server {
         #--------------------------------------------------
         # Subtest: HTTP Status is as expected
         #--------------------------------------------------
-        my $status = $ref->{status};
-        like($res->status_line, qr/^$status/, "Status $status");
+        like($res->status_line, qr/^$ref->{status}/, "Status");
 
         #--------------------------------------------------
         # Subtest: Date and time is correct
@@ -100,25 +92,15 @@ sub connect_to_server {
         #--------------------------------------------------
         isnt($res->headers->{'server'}, undef, "Server");
 
-        if ($ref->{status} == 200) {
-            # Determine file properties
-            (my $file, my $file_time, my $file_size) = get_url_properties($root_dir, $ref);
-
+        if ($ref->{status} == 301) {
             #------------------------------------------------------------------
-            # Subtest: Header field 'Last-Modified' equal to file mtime
+            # Status: 301 Moved Permanently
             #------------------------------------------------------------------
-            is($res->headers->{'last-modified'}, $file_time, "Last-Modified");
-
+            my $regex = qr/$ref->{location}$/;
             #------------------------------------------------------------------
-            # Subtest: Header field 'Content-Length' equal to file size
+            # Subtest: Header field 'Location' contains redirection link
             #------------------------------------------------------------------
-            my $exp_size = (defined $offset) ? $file_size - $offset : $file_size;
-            is($res->headers->{'content-length'}, $exp_size, "Content-Length");
-
-            #------------------------------------------------------------------
-            # Subtest: Provided response body matches file content
-            #------------------------------------------------------------------
-            check_file_content($res->content, $file, $offset) if $method eq 'GET';
+            like($res->headers->{'location'}, $regex, "Location");
         } # end if
     };
 } # end of connect_to_server

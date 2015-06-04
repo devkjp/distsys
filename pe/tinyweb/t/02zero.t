@@ -27,17 +27,10 @@ setlocale(LC_TIME, $locale_str) or die "Cannot set LC_TIME to '$locale_str'";
 # Test Cases
 #--------------------------------------------------------------------------
 my @tests = (
-    [ { method => 'GET',  url => "/index.html", status => 200 } ],
-    [ { method => 'HEAD', url => "/index.html", status => 200 } ],
-    [ { method => 'HEAD', url => "/images/computerhead1.gif", status => 200 } ],
-    [ { method => 'GET',  url => "/images/computerhead1.gif", status => 200 } ],
-    [ { method => 'HEAD', url => "/example.pdf", status => 200 } ],
-    [ { method => 'GET',  url => "/example.pdf", status => 200 } ],
-    [ { method => 'HEAD', url => "/css/default.css", status => 200 } ],
-    [ { method => 'GET',  url => "/css/default.css", status => 200 } ],
-    # Non-existing file
-    [ { method => 'HEAD', url => "/blablabla.html", status => 404 } ],
-    [ { method => 'GET',  url => "/blablabla.html", status => 404 } ],
+    # file with zeros
+    [ { method => 'GET',  url => "/zeros1.jpg", status => 200 } ],
+    [ { method => 'GET',  url => "/zeros2.jpg", status => 200 } ],
+    [ { method => 'GET',  url => "/zeros3.jpg", status => 200 } ]
 );
 
 # Set the number of test cases (excluding subtests)
@@ -87,8 +80,7 @@ sub connect_to_server {
         #--------------------------------------------------
         # Subtest: HTTP Status is as expected
         #--------------------------------------------------
-        my $status = $ref->{status};
-        like($res->status_line, qr/^$status/, "Status $status");
+        like($res->status_line, qr/^$ref->{status}/, "Status");
 
         #--------------------------------------------------
         # Subtest: Date and time is correct
@@ -103,11 +95,6 @@ sub connect_to_server {
         if ($ref->{status} == 200) {
             # Determine file properties
             (my $file, my $file_time, my $file_size) = get_url_properties($root_dir, $ref);
-
-            #------------------------------------------------------------------
-            # Subtest: Header field 'Last-Modified' equal to file mtime
-            #------------------------------------------------------------------
-            is($res->headers->{'last-modified'}, $file_time, "Last-Modified");
 
             #------------------------------------------------------------------
             # Subtest: Header field 'Content-Length' equal to file size
