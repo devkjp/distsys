@@ -66,10 +66,7 @@ CPAN ist der Paketmanager von Perl. Er wird gestartet mit:
 Die Testscripte verwenden verschiedene Perlmodule, die bei
 einer Standardinstallation nachinstalliert werden müssen.
 
-cpan> install File::MimeInfo
-cpan> install IO::Socket::IP
-cpan> install POSIX::strptime
-cpan> install LWP::UserAgent
+cpan> install File::MimeInfo IO::Socket::IP POSIX::strptime LWP::UserAgent
 
 
 

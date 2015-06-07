@@ -1,6 +1,11 @@
-//
-// TODO: Include your module header here
-//
+/*===================================================================
+ * DHBW Ravensburg - Campus Friedrichshafen
+ *
+ * Vorlesung Verteilte Systeme
+ *
+ * Author:  Ralf Reutemann
+ *
+ *===================================================================*/
 
 #include <string.h>
 #include "content.h"
@@ -18,9 +23,6 @@ static http_content_type_entry_t http_content_type_list[] = {
 };
 
 
-//
-// TODO: Include your function header here
-//
 http_content_type_t
 get_http_content_type(const char *filename)
 {
@@ -38,13 +40,9 @@ get_http_content_type(const char *filename)
 } /* end of get_http_content_type */
 
 
-//
-// TODO: Include your function header here
-//
 char *
 get_http_content_type_str(const http_content_type_t type)
 {
     return http_content_type_list[type].name;
 } /* end of get_http_content_type_str */
-
 

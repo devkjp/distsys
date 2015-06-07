@@ -1,6 +1,11 @@
-//
-// TODO: Include your module header here
-//
+/*===================================================================
+ * DHBW Ravensburg - Campus Friedrichshafen
+ *
+ * Vorlesung Verteilte Systeme
+ *
+ * Author:  Ralf Reutemann
+ *
+ *===================================================================*/
 
 #ifndef _CONTENT_H
 #define _CONTENT_H

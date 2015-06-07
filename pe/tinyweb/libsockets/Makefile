@@ -12,49 +12,46 @@
 #
 # Author: Ralf Reutemann
 #
-# $Id: Makefile,v 1.3 2014/06/11 14:39:22 ralf Exp ralf $
-#
 #=============================================================================
 
-CC = gcc
-CFLAGS = -g -O2 -Wall -pedantic -fPIC
+
+include ../common_defs.mk
+
+#-----------------------------------------------------------------------------
+# Configure source directory
+#-----------------------------------------------------------------------------
+SRC_DIR     := .
+CFLAGS      += -I$(SRC_DIR)
+SRCS        := $(wildcard $(SRC_DIR)/*.c)
 
 #-----------------------------------------------------------------------------
 # Configure OS/Architecture-specific build directory and create if necessary
 #-----------------------------------------------------------------------------
 OS          := $(shell uname -s)
 ARCH        := $(shell uname -m)
-SRC_DIR     := .
 BUILD_DIR   := build/$(OS)_$(ARCH)
 OBJ_DIR     := $(BUILD_DIR)
-dummy1      := $(shell test -d $(BUILD_DIR) || mkdir -p $(BUILD_DIR))
+foo         := $(shell test -d $(BUILD_DIR) || mkdir -p $(BUILD_DIR))
+foo         := $(shell test -d $(OBJ_DIR) || mkdir -p $(OBJ_DIR))
+OBJS        := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRCS))
 #-----------------------------------------------------------------------------
 
-SRCS        := $(wildcard $(SRC_DIR)/*.c)
-OBJS        := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRCS))
+TARGETS = $(BUILD_DIR)/libsockets.a
 
-TARGETS = $(BUILD_DIR)/libsockets.a $(BUILD_DIR)/libsockets.so
-
-.phony:
+.PHONY:
 all: $(TARGETS)
 
 $(BUILD_DIR)/libsockets.a : $(OBJS)
-	rm -f $@
-	ar qcv $@ $(OBJS)
-	ranlib $@
-
-$(BUILD_DIR)/libsockets.so : $(OBJS)
-	$(CC) -shared -o $@ $(OBJS)
+	@echo AR $@
+	@rm -f $@
+	@ar qcv $@ $(OBJS)
+	@ranlib $@
 
 $(OBJ_DIR)/%.o : $(SRC_DIR)/%.c
 	@echo CC $<
 	@$(CC) $(CFLAGS) -I$(SRC_DIR) -o $(OBJ_DIR)/$*.o -c $<
 
-.phony:
-depend:
-	makedepend $(SRC)
-
-.phony:
+.PHONY:
 clean:
 	rm -f $(BUILD_DIR)/*.o $(TARGETS)
 

@@ -38,6 +38,9 @@ my @tests = (
     # Non-existing file
     [ { method => 'HEAD', url => "/blablabla.html", status => 404 } ],
     [ { method => 'GET',  url => "/blablabla.html", status => 404 } ],
+    # Large file
+    [ { method => 'HEAD', url => "/longtext.txt", status => 200 } ],
+    [ { method => 'GET',  url => "/longtext.txt", status => 200 } ],
 );
 
 # Set the number of test cases (excluding subtests)
