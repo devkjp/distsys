@@ -251,13 +251,23 @@ main(int argc, char *argv[])
     install_signal_handlers();
     init_logging_semaphore();
 
-    // TODO: start the server and handle clients...
-    // here, as an example, show how to interact with the
-    // condition set by the signal handler above
+    // get root_dir to handle it later in child process
+    char* root_dir = my_opt.root_dir;
+
+    // start the server and create socket
     printf("[%d] Starting server '%s'...\n", getpid(), my_opt.progname);
+    int accepting_socket = passive_tcp(my_opt.server_port, 5);
+    struct sockaddr_in from_client;
+    
     server_running = true;
     while(server_running) {
-        pause();
+        socklen_t from_client_len = sizeof(from_client);
+        
+        // Accept new Client
+        int listening_socket = accept(accepting_socket, (struct sockaddr *) &from_client, &from_client_len);
+        
+        handle_client(listening_socket, root_dir);
+        
     } /* end while */
 
     printf("[%d] Good Bye...\n", getpid());
