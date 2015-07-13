@@ -44,6 +44,7 @@ typedef struct http_req {
     http_method_t       method;
     char*               resource;
     char*               range;    
+    char*               if_modified_since;
 } http_req_t;
 
 /*

@@ -33,6 +33,19 @@ int parse_header(char * buffer, http_req_t * request)
 					return -1;
 				}
 			}
+			if (strcmp(header_string, "If-Modified-Since") == 0)
+			{	
+				if (walker)
+				{
+					strncpy(header_value, buffer, walker-buffer);
+					header_value[walker-buffer] = '\0';
+					request->if_modified_since = header_value;
+				} 
+				else 
+				{
+					return -1;
+				}
+			}
 
 			walker = strstr(buffer, "\r\n");
 			if (walker)
