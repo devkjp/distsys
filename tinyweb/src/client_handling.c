@@ -208,7 +208,7 @@ int handle_client(int sd, char* root_dir)
 	int err = 0;
 	http_req_t req;
 	http_res_t res;
-	//char* req_string = malloc(BUFSIZE);
+	char* req_string = malloc(BUFSIZE);
 	char* path = "web/index.html"; 
 	
 	// initialize response
@@ -227,7 +227,7 @@ int handle_client(int sd, char* root_dir)
 	//req_string = "GET /test/resource/test.jpg HTTP/1.1\r\nRange:Test\r\nContent-Length:0\r\n\r\n\0";
 	
 	// read the request from the socket
-	// read_from_socket (sd, req_string, BUFSIZE, 1);
+	read_from_socket (sd, req_string, BUFSIZE, 1);
 	// ^ this does not work, use own function instead:
 	//int cc;
 	//char buf[BUFSIZE];
@@ -251,8 +251,12 @@ int handle_client(int sd, char* root_dir)
 		}
 	}
 */	
-	
-	
+	err = parse_request(&req, req_string);
+	if (err < 0)
+	{
+		exit(-1);
+	}
+		
 	/* request handling ----------------------------------------------------------
 	 *
 	 * use positive logic within the if-statements
