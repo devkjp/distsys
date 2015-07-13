@@ -42,6 +42,35 @@
  // GLOBAL REQUEST COUNTER
 //static int request_counter = 0;
 
+char * get_path(char * dirpath, char * resource)
+{	
+	char * outStr = malloc(2048);
+	// if dir and res are empty, return empty string.
+	if (strlen(dirpath) == 0 && strlen(resource)==0)
+	{
+		return "";
+	}
+	
+	// Remove leading / from resource
+	if(resource == strstr(resource, "/"))
+	{
+		resource += 1;
+	}
+	
+	// Add / between dirpath and resource
+	int len = strlen(dirpath);
+	if(len > 0 && dirpath[len-1] != '/')
+	{	
+		char * newDirpath = malloc(2048);
+		strcpy(newDirpath, dirpath);
+		strcat(newDirpath, "/");
+		dirpath = newDirpath;
+	}
+	
+	strcat(outStr, dirpath);
+	strcat(outStr, resource);
+	return outStr;
+}
 
 /*
  * function:		send_response
@@ -209,7 +238,6 @@ int handle_client(int sd, char* root_dir)
 	http_req_t req;
 	http_res_t res;
 	char* req_string = malloc(BUFSIZE);
-	char* path = "web/index.html"; 
 	
 	// initialize response
 	res.status = HTTP_STATUS_INTERNAL_SERVER_ERROR;
@@ -222,35 +250,10 @@ int handle_client(int sd, char* root_dir)
     res.accept_ranges = "";
     res.location = "";
     res.body = "";
-	
 
-	//req_string = "GET /test/resource/test.jpg HTTP/1.1\r\nRange:Test\r\nContent-Length:0\r\n\r\n\0";
-	
 	// read the request from the socket
 	read_from_socket (sd, req_string, BUFSIZE, 1);
-	// ^ this does not work, use own function instead:
-	//int cc;
-	//char buf[BUFSIZE];
-	
-/*	while ((cc = read(sd, req_string, BUFSIZE)))
-	{
-		if (cc < 0)
-		{
-			fprintf(stderr, "[ERR #%d] when reading file!\n", cc); 
-			exit(1);
-		}
-		
-		err = parse_request(&req, req_string);
-		if (err < 0)
-		{
-			//exit(-1);
-		}
-		else
-		{
-			safe_printf("Method: %s\nResource: %s\nRange: %s\n", http_method_list[req.method].name, req.resource, req.range);
-		}
-	}
-*/	
+
 	err = parse_request(&req, req_string);
 	if (err < 0)
 	{
@@ -269,6 +272,7 @@ int handle_client(int sd, char* root_dir)
 	// check http method if its GET or HEAD
 	if ( req.method == HTTP_METHOD_GET || req.method == HTTP_METHOD_HEAD ) {
 		// check if file exists
+		char* path = get_path(root_dir, req.resource);
 		struct stat fstatus;
 		int stat_return = stat(path, &fstatus);
 		if ( stat_return >= 0 && S_ISREG(fstatus.st_mode) ) { 
