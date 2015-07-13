@@ -33,6 +33,7 @@
 #include <request_parser.h>
 #include <safe_print.h>
 #include <sem_print.h>
+#include <content.h>
 
 #define BUFSIZE 1000
 #define WRITE_TIMEOUT 1000
@@ -267,6 +268,7 @@ int handle_client(int sd, char* root_dir)
 		exit(-1);
 	}
 		
+	safe_printf("HTTP_STATUS_NOT_IMPLEMENTED: %s\n", http_method_list[req.method].name);
 	/* request handling ----------------------------------------------------------
 	 *
 	 * use positive logic within the if-statements
@@ -285,7 +287,11 @@ int handle_client(int sd, char* root_dir)
 		if ( stat_return >= 0 && S_ISREG(fstatus.st_mode) ) { 
 			//check if file is accessible (read rights)
 			if ( fstatus.st_mode & S_IROTH ) { 
-				// check cgi...
+						
+						// happy path
+						http_content_type_t contType = get_http_content_type(path);
+						char* contStr = get_http_content_type_str(contType);
+						res.content_type = contStr;
 				
 				
 			}else{
@@ -332,7 +338,7 @@ Strcpy(<Tatsächlicher Pfad>, root_dir);
 	res.status = HTTP_STATUS_OK;
 	res.last_modified = "1";
 	res.content_length = "2";
-    res.content_type = "3";
+    //res.content_type = "3";
     res.connection = "4";
     res.accept_ranges = "5";
     res.location = "6";
