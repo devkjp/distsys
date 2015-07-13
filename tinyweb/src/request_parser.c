@@ -101,13 +101,13 @@ int parse_method(char * buffer, http_req_t * request){
 		return -1;
 	}
 	
-	if (strcmp(buffer, "GET")){
+	if (strstr(buffer, "GET") == buffer){
 		request->method = HTTP_METHOD_GET;
-	} else if (strcmp(buffer, "HEAD")){
+	} else if (strstr(buffer, "HEAD") == buffer){
 		request->method = HTTP_METHOD_HEAD;
-	} else if (strcmp(buffer, "TEST")){
+	} else if (strstr(buffer, "TEST") == buffer){
 		request->method = HTTP_METHOD_TEST;
-	} else if (strcmp(buffer, "ECHO")){
+	} else if (strstr(buffer, "ECHO") == buffer){
 		request->method = HTTP_METHOD_ECHO;
 	} else {
 		request->method = HTTP_METHOD_NOT_IMPLEMENTED;
