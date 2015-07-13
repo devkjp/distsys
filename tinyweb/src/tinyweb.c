@@ -305,14 +305,19 @@ main(int argc, char *argv[])
         if (listening_socket >= 0){ /* Accept was ok */
             ++req_no;
             pid_t pid = fork();
-            if (pid == 0) { /* Child Process */
+            if (pid == 0) 
+            { /* Child Process */
                 print_log("Process created to handle new request #%d\n", req_no);
                 close(accepting_socket);            
                 handle_client(listening_socket, root_dir);
                 exit(0);
-            } else if (pid > 0) { /* Parent Process */
+            } 
+            else if (pid > 0) 
+            { /* Parent Process */
                 close(listening_socket);
-            } else { /* Fork Failed */
+            } 
+            else 
+            { /* Fork Failed */
                 err_print("Could not fork for new request!");
                 exit(-1);
             }

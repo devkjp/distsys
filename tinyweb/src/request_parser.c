@@ -96,25 +96,23 @@ int parse_resource_string(char * buffer, http_req_t * request)
 
 int parse_method(char * buffer, http_req_t * request){
 	char * walker; 
+	walker = strstr(buffer, " ");
+	if (walker == NULL){
+		return -1;
+	}
 	
-	walker = buffer;
-	
-	if (*walker == 'G')
-	{
-		if (*(++walker) != 'E') { return -1;}
-		if (*(++walker) != 'T') { return -1;}
+	if (strcmp(buffer, "GET")){
 		request->method = HTTP_METHOD_GET;
-	}
-	if (*walker == 'H')
-	{
-		if (*(++walker) != 'E') { return -1;}
-		if (*(++walker) != 'A') { return -1;}
-		if (*(++walker) != 'D') { return -1;}
+	} else if (strcmp(buffer, "HEAD")){
 		request->method = HTTP_METHOD_HEAD;
+	} else if (strcmp(buffer, "TEST")){
+		request->method = HTTP_METHOD_TEST;
+	} else if (strcmp(buffer, "ECHO")){
+		request->method = HTTP_METHOD_ECHO;
+	} else {
+		request->method = HTTP_METHOD_NOT_IMPLEMENTED;
 	}
-	
-	if (*(++walker) != ' ') { return -1;}
-	
+
 	int err = parse_resource_string(++walker, request);
 	return err;
 }
