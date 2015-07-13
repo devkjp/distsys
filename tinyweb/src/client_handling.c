@@ -241,8 +241,15 @@ int handle_client(int sd, char* root_dir)
 	
 	// initialize response
 	res.status = HTTP_STATUS_INTERNAL_SERVER_ERROR;
-	res.date = "";
-	res.server = "";
+	
+	// get current time
+	struct tm *ts;
+	char* timestr = malloc(BUFSIZE);
+	time_t current_time = time(NULL);
+	ts = localtime(&current_time);
+	strftime(timestr, BUFSIZE, "%a, %d %b %Y %T GMT", ts);
+	res.date = timestr;
+	res.server = "Tinyweb Polkehn/Reutebuch/Schulz";
 	res.last_modified = "";
 	res.content_length = "";
     res.content_type = "";
