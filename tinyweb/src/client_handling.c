@@ -32,6 +32,7 @@
 #include <client_handling.h>
 #include <request_parser.h>
 #include <safe_print.h>
+#include <sem_print.h>
 
 #define BUFSIZE 1000
 #define WRITE_TIMEOUT 1000
@@ -61,7 +62,7 @@ int send_response(http_res_t * response, int sd)
 	http_status_entry_t status = http_status_list[index];
 	char status_code[50];
 	sprintf(status_code, "%u", status.code);
-	printf("[INFO] STATUS CODE: %s\n", status_code);
+	print_log("[INFO] STATUS CODE: %s\n", status_code);
 	// status zeile zusammen bauen
 	char* status_line = malloc(BUFSIZE);
 	strcpy(status_line, "HTTP/1.1 ");

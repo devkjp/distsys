@@ -37,6 +37,8 @@
 
 #include "tinyweb.h"
 #include "connect_tcp.h"
+#include "passive_tcp.h"
+#include "client_handling.h"
 
 #include "safe_print.h"
 #include "sem_print.h"
@@ -54,13 +56,26 @@ static volatile sig_atomic_t server_running = false;
 static void
 sig_handler(int sig)
 {
-    switch(sig) {
+    switch(sig) { 
         case SIGINT:
-            // use our own thread-safe implemention of printf
+            // treat interrupt
             safe_printf("\n[%d] Server terminated due to keyboard interrupt\n", getpid());
             server_running = false;
             break;
-        // TODO: Complete signal handler
+        case SIGCHLD:
+        	// treat child process signal
+        	safe_printf("\n[%d] Signal from child process detected\n", getpid());
+            break;
+        case SIGSEGV:
+        	// treat segfault
+        	safe_printf("\n[%d] Server terminated due to segmentation violation\n", getpid());
+			server_running = false;
+            break;
+        case SIGABRT:
+        	// treat abort
+			safe_printf("\n[%d] Server terminated due to system abort\n", getpid());
+			server_running = false;
+            break;
         default:
             break;
     } /* end switch */
@@ -224,6 +239,23 @@ install_signal_handlers(void)
         perror("sigaction(SIGINT)");
         exit(EXIT_FAILURE);
     } /* end if */
+    
+    // add SIGCHLD
+	if(sigaction(SIGCHLD, &sa, NULL) < 0) {
+        perror("sigaction(SIGCHLD)");
+        //exit(EXIT_FAILURE);
+    } /* end if */
+    // add SIGSEGV
+    if(sigaction(SIGSEGV, &sa, NULL) < 0) {
+        perror("sigaction(SIGSEGV)");
+        exit(EXIT_FAILURE);
+    } /* end if */
+    
+    // add SIGABRT
+    if(sigaction(SIGABRT, &sa, NULL) < 0) {
+        perror("sigaction(SIGABRT)");
+        exit(EXIT_FAILURE);
+    } /* end if */
 } /* end of install_signal_handlers */
 
 
@@ -253,21 +285,40 @@ main(int argc, char *argv[])
 
     // get root_dir to handle it later in child process
     char* root_dir = my_opt.root_dir;
-
+    
     // start the server and create socket
-    printf("[%d] Starting server '%s'...\n", getpid(), my_opt.progname);
-    int accepting_socket = passive_tcp(my_opt.server_port, 5);
+    unsigned short PORT = 8080;
+    print_log("Starting server '%s'...\n", my_opt.progname);
+    int accepting_socket = passive_tcp(PORT, 5);
+    if (accepting_socket < 0){
+        err_print("Error when opening accepting socket!");
+        exit(-1);
+    }
     struct sockaddr_in from_client;
     
+    int req_no = 0;
     server_running = true;
     while(server_running) {
         socklen_t from_client_len = sizeof(from_client);
-        
-        // Accept new Client
         int listening_socket = accept(accepting_socket, (struct sockaddr *) &from_client, &from_client_len);
         
-        handle_client(listening_socket, root_dir);
-        
+        if (listening_socket >= 0){ /* Accept was ok */
+            ++req_no;
+            pid_t pid = fork();
+            if (pid == 0) { /* Child Process */
+                print_log("Process created to handle new request #%d\n", req_no);
+                close(accepting_socket);            
+                handle_client(listening_socket, root_dir);
+                exit(0);
+            } else if (pid > 0) { /* Parent Process */
+                close(listening_socket);
+            } else { /* Fork Failed */
+                err_print("Could not fork for new request!");
+                exit(-1);
+            }
+        } /*else {
+            print_log("Accept failed!\n");
+        }   */   
     } /* end while */
 
     printf("[%d] Good Bye...\n", getpid());

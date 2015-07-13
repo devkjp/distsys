@@ -15,7 +15,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <semaphore.h>
-
+#include <passive_tcp.h>
+#include <client_handling.h>
 
 #define SEM_NAME                  "/tinysem"
 #define err_print(s)              fprintf(stderr, "ERROR: %s, %s:%d\n", (s), __FILE__, __LINE__)
