@@ -39,7 +39,7 @@
 #define _DEBUG
  
  // GLOBAL REQUEST COUNTER
-static int request_counter = 0;
+//static int request_counter = 0;
 
 
 /*

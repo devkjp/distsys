@@ -15,6 +15,9 @@
 #include <netdb.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <http.h>
+
+
 
 #define err_print(s)              fprintf(stderr, "ERROR: %s, %s:%d\n", (s), __FILE__, __LINE__)
 
@@ -32,6 +35,32 @@ typedef struct prog_options {
     struct addrinfo    *server_addr;
     int                 server_port;
 } prog_options_t;
+
+
+/*
+ * struct to store http_request
+ */
+typedef struct http_req {
+    http_method_t       method;
+    char*               resource;
+    char*               range;    
+} http_req_t;
+
+/*
+ * struct to store http_response
+ */
+typedef struct http_res {
+	http_status_t	status;
+    char*       	date;
+    char*       	server;
+    char*       	last_modified;
+    char*       	content_length;
+    char*       	content_type;
+    char*       	connection;
+    char*       	accept_ranges;
+    char*       	location;
+    char*			body;
+} http_res_t;
 
 #endif
 
