@@ -330,13 +330,11 @@ Strcpy(<Tatsächlicher Pfad>, root_dir);
 
 	//request.methode = GET
 	res.status = HTTP_STATUS_OK;
-	res.date = "Day, 01 Jan 2000 12:00:00 GMT";
-	res.server = "C-Server DistSys";
 	res.last_modified = "1";
 	res.content_length = "2";
-    res.content_type = "";
+    res.content_type = "3";
     res.connection = "4";
-    res.accept_ranges = "";
+    res.accept_ranges = "5";
     res.location = "6";
     res.body = "<html><body>Hello world</body></html>";
 	err = send_response(&res, sd);
