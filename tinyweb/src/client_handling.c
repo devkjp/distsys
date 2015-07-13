@@ -226,6 +226,37 @@ int send_response(http_res_t * response, int sd)
 }
 
 /*
+ * function:		send_file_as_body
+ * purpose:			send the given file as response body to the given socket
+ * IN:				int sd - socket descriptor for writing socket
+ *					char * path - path to file to send
+ * OUT:				-
+ * globals used:	-
+ * return value:	zero if okay, anything else if not
+*/
+int 
+send_file_as_body(int sd, char * path)
+{	
+	char * buf = malloc(BUFSIZE);
+	int fd = open(path, O_RDONLY);
+	if (fd >= 0){
+		int cc;
+		while((cc = read(fd, buf, BUFSIZE))){
+			if (cc<0){ /* Error on Read */
+				return cc;
+			}
+			int err = write_to_socket(sd, buf, cc, 1);
+			if (err < 0){ /* Error on Write */
+				return err;
+			}
+		}
+	} else { /* Error on Open */
+		return fd;
+	}
+	return 0;
+}
+
+/*
  * function:		handle_client
  * purpose:			concatenate the header lines and write them to the socket if they exist
  * IN:				int sd - socket descriptor for writing socket
@@ -233,7 +264,8 @@ int send_response(http_res_t * response, int sd)
  * globals used:	-
  * return value:	zero if okay, anything else if not
 */
-int handle_client(int sd, char* root_dir)
+int 
+handle_client(int sd, char* root_dir)
 {	 
 	int err = 0;
 	http_req_t req;
@@ -258,9 +290,11 @@ int handle_client(int sd, char* root_dir)
     res.accept_ranges = "";
     res.location = "";
     res.body = "";
-
+	
+	char * path = "";
+	
 	// read the request from the socket
-	read_from_socket(sd, req_string, BUFSIZE, 1);
+	read_from_socket(sd, req_string, BUFSIZE, 10);
 
 	err = parse_request(&req, req_string);
 	if (err < 0)
@@ -281,7 +315,7 @@ int handle_client(int sd, char* root_dir)
 	// check http method if its GET or HEAD
 	if ( req.method == HTTP_METHOD_GET || req.method == HTTP_METHOD_HEAD ) {
 		// check if file exists
-		char* path = get_path(root_dir, req.resource);
+		path = get_path(root_dir, req.resource);
 		struct stat fstatus;
 		int stat_return = stat(path, &fstatus);
 		if ( stat_return >= 0 && S_ISREG(fstatus.st_mode) ) { 
@@ -358,8 +392,15 @@ int handle_client(int sd, char* root_dir)
 
 	// build header lines and send response
 	err = send_response(&res, sd);
-	if ( err < 0 ) {
-		safe_printf("Failed to send the response: %d\n", err);
+	if ( err >= 0 ) {
+		if (req.method != HTTP_METHOD_HEAD && strlen(path) > 0) {
+			err = send_file_as_body(sd, path);		
+			if (err < 0){
+				err_print("Failed to send response body!");
+			}
+		} 
+	} else {
+		err_print("Failed to send response header!");
 	}
 	return 0;
 }
