@@ -35,7 +35,7 @@
 #include <sem_print.h>
 #include <content.h>
 
-#define BUFSIZE 1000
+#define BUFSIZE 100000
 #define WRITE_TIMEOUT 1000
 
 #define _DEBUG
@@ -260,7 +260,7 @@ int handle_client(int sd, char* root_dir)
     res.body = "";
 
 	// read the request from the socket
-	read_from_socket (sd, req_string, BUFSIZE, 1);
+	read_from_socket(sd, req_string, BUFSIZE, 1);
 
 	err = parse_request(&req, req_string);
 	if (err < 0)
@@ -288,12 +288,43 @@ int handle_client(int sd, char* root_dir)
 			//check if file is accessible (read rights)
 			if ( fstatus.st_mode & S_IROTH ) { 
 						
-						// happy path
+						// --- happy path ---
+						
+						// set content type
 						http_content_type_t contType = get_http_content_type(path);
 						char* contStr = get_http_content_type_str(contType);
 						res.content_type = contStr;
+						
+						// set last_modified
+						struct tm *ts;
+						char* lastStr = malloc(BUFSIZE);
+						ts = localtime(&fstatus.st_mtim.tv_sec);
+						strftime(lastStr, BUFSIZE, "%a, %d %b %Y %T GMT", ts);
+						res.last_modified = lastStr;
 				
-				
+						// set content content
+						res.content_length = "1";
+						int file = open(path, O_RDONLY);
+						if ( file >= 0 ) {
+							char* buf = malloc(BUFSIZE);
+							
+							read_from_socket(file, buf, BUFSIZE, 1);
+							
+							res.content_length = malloc(BUFSIZE);
+							sprintf(res.content_length, "%d", (int)fstatus.st_size);
+							
+							// set status okay
+							res.status = HTTP_STATUS_OK;
+							
+						}else{
+							err_print("Resource could not be opened");
+							res.status = HTTP_STATUS_INTERNAL_SERVER_ERROR;
+						}
+						
+						
+						
+						
+						
 			}else{
 				// resource is not accessible - return 403 - forbidden
 				res.status = HTTP_STATUS_FORBIDDEN;
@@ -324,25 +355,8 @@ int handle_client(int sd, char* root_dir)
 		return 0;
 	} /* endif GET HEAD */
 
-/* proces 
-Char * <Tatsächlicher Pfad> = malloch(BUFSIZE);
-Strcpy(<Tatsächlicher Pfad>, root_dir);
-<Tatsächlicher Pfad> = strcat(root_dir, req.resource);
-*/
 
-	//safe_printf("hola\r\n");
-	// request parsen -> request 
-	//int err = parse_request(&request, request_str);
-
-	//request.methode = GET
-	res.status = HTTP_STATUS_OK;
-	res.last_modified = "1";
-	res.content_length = "2";
-    //res.content_type = "3";
-    res.connection = "4";
-    res.accept_ranges = "5";
-    res.location = "6";
-    res.body = "<html><body>Hello world</body></html>";
+	// build header lines and send response
 	err = send_response(&res, sd);
 	if ( err < 0 ) {
 		safe_printf("Failed to send the response: %d\n", err);
