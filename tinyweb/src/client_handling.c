@@ -297,7 +297,8 @@ int handle_client(int sd, char* root_dir)
 				if ( fstatus.st_mode & S_IROTH ) { 
 					
 						// if modified since timestamp from request
-						//if ( fstatus. )
+						if ( fstatus.st_mtime >= req.if_modified_since ) {
+						
 							
 							// --- happy path ---
 					
@@ -333,10 +334,15 @@ int handle_client(int sd, char* root_dir)
 								res.status = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 							}
 							
-						// else date nicht schicken			
-						
+						// else of last_modified of the resource		
+						}else{
+							// dont send the ressource
+							
+							
+							
+						}
 				
-				}else{
+					}else{ /* else of file not accessible */
 					// resource is not accessible - return 403 - forbidden
 					res.status = HTTP_STATUS_FORBIDDEN;
 					// directly write status to socket and exit
@@ -354,7 +360,7 @@ int handle_client(int sd, char* root_dir)
 					safe_printf("Failed to send the response (404): %d\n", err);
 				}
 				return 0;
-				}/* endif file exists */
+			}/* endif file exists */
 	
 				// else: 301..
 			
