@@ -1,6 +1,7 @@
 #include <safe_print.h>
 #include <string.h>
 #include <tinyweb.h>
+#include <sem_print.h>
 
 #define BUFSIZE 1000
 
@@ -17,34 +18,52 @@ int parse_header(char * buffer, http_req_t * request)
 		if (walker)
 		{
 			strncpy(header_string, buffer, walker-buffer);
-			header_string[walker-buffer+1] = '\0';
+			header_string[walker-buffer] = '\0';
 			buffer = walker + 1;
 			walker = strstr(buffer, "\r\n");
-			if (strcmp(header_string, "Range") == 0)
-			{	
+			safe_printf("Header: %s\n", header_string);
+			if (strcmp(header_string, "Range") == 0){	
 				if (walker)
-				{
+				{	
 					strncpy(header_value, buffer, walker-buffer);
+					// Get first number
+					char * w = header_value;
+					header_value = strstr(header_value, "=")+1;
+					w = strstr(header_value, "-");
+					if (w>header_value){
+						char * first_number = malloc(BUFSIZE);
+						strncpy(first_number, header_value, w - header_value);
+						first_number[w-header_value] = '\0';
+						request->range_start = atoi(first_number);
+					}
+					// Get second number
+					header_value = w;
+					header_value++;
+					if(strlen(header_value) > 0){
+						char * second_number = malloc(BUFSIZE);
+						strncpy(second_number, header_value, strlen(header_value));
+						request->range_end = atoi(second_number);
+					}
+					
 					header_value[walker-buffer] = '\0';
-					request->range = header_value;
 				} 
 				else 
 				{
 					return -1;
 				}
-			}
-			if (strcmp(header_string, "If-Modified-Since") == 0)
-			{	
+			} else if (strcmp(header_string, "If-Modified-Since") == 0)	{	
 				if (walker)
-				{
+				{	
 					strncpy(header_value, buffer, walker-buffer);
 					header_value[walker-buffer] = '\0';
-					request->if_modified_since = header_value;
+					safe_printf("If-Modified_since: %s\n", header_value);
 				} 
 				else 
 				{
 					return -1;
 				}
+			} else if (strcmp(header_string, "") == 0) {
+				return 0;
 			}
 
 			walker = strstr(buffer, "\r\n");
@@ -74,7 +93,6 @@ int parse_version(char * buffer, http_req_t * request)
 {	
 	char * version_string = malloc(BUFSIZE);
 	char * walker = strstr(buffer, "\r\n");
-	
 	if (walker)
 	{	
 		strncpy(version_string, buffer, walker-buffer);
@@ -86,7 +104,7 @@ int parse_version(char * buffer, http_req_t * request)
 		}
 		free(version_string);
 		return -1;
-	}
+	} 
 	free(version_string);
 	return -1;
 }
@@ -101,8 +119,7 @@ int parse_resource_string(char * buffer, http_req_t * request)
 		strncpy(resource_string, buffer, walker-buffer );
 		resource_string[walker-buffer+1] = '\0';					
 		request->resource = resource_string;
-		parse_version(++walker, request);
-		return 0;
+		return parse_version(++walker, request);
 	}	
 	return -1;	
 }
@@ -134,6 +151,9 @@ int parse_request(http_req_t * request, char *req_string)
 {
 	char * buffer = malloc(BUFSIZE);
 	strncpy(buffer, req_string, strlen(req_string));
+	
+	request->range_start = -1;
+	request->range_end = -1;
 
 	int err = parse_method(buffer, request);
 	if (err < 0 )
@@ -141,6 +161,7 @@ int parse_request(http_req_t * request, char *req_string)
 		safe_printf("Error on parsing request!\n");
 	}
 	free(buffer);
+	print_log("RANGE: %d - %d\n", request->range_start, request->range_end);
 	return err;
 }
 
