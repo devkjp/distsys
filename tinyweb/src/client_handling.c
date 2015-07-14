@@ -311,68 +311,83 @@ int handle_client(int sd, char* root_dir)
 						
 						safe_printf("Desired Range: %d - %d\n", req.range_start, req.range_end);
 						
-						// check if range is valid
-						if ( req.range_start <= fstatus.st_size &&
-							 req.range_end   <= fstatus.st_size &&
-							 (req.range_end < 0 || req.range_start <= req.range_end  ))
-							 {
+						// check if cgi needs to be processed
+						if(req.resource != strstr(req.resource, "/cgi-bin"))
+						{
 							
-							// --- happy path ---
+							// check if range is valid
+							if ( req.range_start < fstatus.st_size &&
+								 req.range_end   < fstatus.st_size &&
+								 (req.range_end < 0 || req.range_start <= req.range_end  ))
+								 {
 							
-							// correct ranges
-							if ( req.range_start < 0 ) {
-								req.range_start = 0;
-							}
-							if ( req.range_end < 0 ) {
-								req.range_end = fstatus.st_size;
-							}
+								// --- happy path ---
+							
+								bool isPartial = false;
+								if (req.range_start >= 0 || req.range_end >= 0){
+									isPartial = true;
+								}
+							
+								// correct ranges
+								if ( req.range_start < 0 ) {
+									req.range_start = 0;
+								}
+								if ( req.range_end < 0 ) {
+									req.range_end = fstatus.st_size;
+								}
 							
 							
-							// set content type
-							http_content_type_t contType = get_http_content_type(path);
-							char* contStr = get_http_content_type_str(contType);
-							res.content_type = contStr;
+								// set content type
+								http_content_type_t contType = get_http_content_type(path);
+								char* contStr = get_http_content_type_str(contType);
+								res.content_type = contStr;
 							
-							// set last_modified
-							struct tm *ts;
-							char* lastStr = malloc(BUFSIZE);
-							ts = localtime(&fstatus.st_mtim.tv_sec);
-							strftime(lastStr, BUFSIZE, "%a, %d %b %Y %T GMT", ts);
-							res.last_modified = lastStr;
+								// set last_modified
+								struct tm *ts;
+								char* lastStr = malloc(BUFSIZE);
+								ts = localtime(&fstatus.st_mtim.tv_sec);
+								strftime(lastStr, BUFSIZE, "%a, %d %b %Y %T GMT", ts);
+								res.last_modified = lastStr;
 					
-							// set content length
-							char* rangeStr = malloc(BUFSIZE);
-							sprintf(rangeStr, "%d", (req.range_end - req.range_start)); 
-							res.content_length = rangeStr;
-							/*int file = open(path, O_RDONLY);
-							  if ( file >= 0 ) {
-								char* buf = malloc(BUFSIZE);
-								
-								read_from_socket(file, buf, BUFSIZE, 1);
-								
-								//res.content_length = malloc(BUFSIZE);
-								//sprintf(res.content_length, "%d", (int)fstatus.st_size);
-								
-								// set status okay
-								
-								
-							}else{
-								err_print("Resource could not be opened");
-								res.status = HTTP_STATUS_INTERNAL_SERVER_ERROR;
-							}*/
+								// set content length
+								char* rangeStr = malloc(BUFSIZE);
+								sprintf(rangeStr, "%d", (req.range_end - req.range_start)); 
+								res.content_length = rangeStr;
+
+								if (! isPartial){
+									res.status = HTTP_STATUS_OK;
+								} else {
+									res.status = HTTP_STATUS_PARTIAL_CONTENT;
+									char * content_range_str = malloc(BUFSIZE);
+									sprintf(content_range_str, "bytes %d-%d/%d", req.range_start, req.range_end-1, (int) fstatus.st_size);
+									res.content_range = content_range_str;
+								}
 							
-							if (req.range_start == 0 && req.range_end == fstatus.st_size){
+							}else{ /* else of range check */
+								// range is not satisfiable - 416
+								res.status = HTTP_STATUS_RANGE_NOT_SATISFIABLE;
+							}	
+							
+						} else { /* CGI needs to be processed */
+							
+							char * cgi_result = malloc(BUFSIZE);
+							cgi_result = process_cgi(path);
+							
+							if (cgi_result != NULL) { /* Succesful execution */
+								res.body = cgi_result;
 								res.status = HTTP_STATUS_OK;
 							} else {
-								res.status = HTTP_STATUS_PARTIAL_CONTENT;
+								res.status = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 							}
+							// directly write status to socket and exit
+							err = send_response(&res, sd);
+							if ( err < 0 ) {
+								safe_printf("Failed to send the response (403): %d\n", err);
+							}
+							return 0;
 							
-							
-						}else{ /* else of range check */
-							// range is not satisfiable - 416
-							res.status = HTTP_STATUS_RANGE_NOT_SATISFIABLE;
-						}	
-					 		
+						}
+
 					}else{ /* else of last_modified of the resource */ 
 						// dont send the ressource, just 304 not modified
 						res.status = HTTP_STATUS_NOT_MODIFIED;
@@ -400,7 +415,7 @@ int handle_client(int sd, char* root_dir)
 				return 0;
 			}/* endif file exists */
 	
-		}else{ /* else of check if exists */
+		}else{ /* else of check if directory */
 			// requested resource is a directory - respond 301
 			res.status = HTTP_STATUS_MOVED_PERMANENTLY;
 			// write path an add slash
@@ -414,7 +429,7 @@ int handle_client(int sd, char* root_dir)
 			return 0;
 		}	
 		
-	}else{ /* else of check directory */
+	}else{ /* else of check http method */
 		// return status 501 - not implemented
 		res.status = HTTP_STATUS_NOT_IMPLEMENTED;
 		// directly write status to socket and exit
@@ -431,7 +446,8 @@ int handle_client(int sd, char* root_dir)
 	if ( err >= 0 ) {
 		if (req.method != HTTP_METHOD_HEAD && 
 			strlen(path) > 0 && 
-			res.status != HTTP_STATUS_MOVED_PERMANENTLY) {
+			res.status != HTTP_STATUS_MOVED_PERMANENTLY) 
+		{
 			err = send_file_as_body(sd, path, req.range_start, req.range_end);		
 			if (err < 0){
 				err_print("Failed to send response body!");

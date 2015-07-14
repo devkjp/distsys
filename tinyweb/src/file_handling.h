@@ -9,3 +9,6 @@
 */
 int 
 send_file_as_body(int sd, char * path, int range_start, int range_end);
+
+char *
+process_cgi(char * path);
