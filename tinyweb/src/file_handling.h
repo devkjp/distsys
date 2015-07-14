@@ -8,4 +8,4 @@
  * return value:	zero if okay, anything else if not
 */
 int 
-send_file_as_body(int sd, char * path);
+send_file_as_body(int sd, char * path, int range_start, int range_end);

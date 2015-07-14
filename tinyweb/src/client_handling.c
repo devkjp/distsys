@@ -289,15 +289,28 @@ int handle_client(int sd, char* root_dir)
 			
 			// check if it exists
 			if ( stat_return >= 0 && S_ISREG(fstatus.st_mode) ) { 
+				
 				//check if file is accessible (read rights)
 				if ( fstatus.st_mode & S_IROTH ) { 
 					
-						// if modified since timestamp from request
-						if ( fstatus.st_mtime >= req.if_modified_since ) {
+					// if modified since timestamp from request
+					if ( fstatus.st_mtime > req.if_modified_since ) {
 						
+						// check if range is valid
+						if ( req.range_start <= fstatus.st_size &&
+							 req.range_end   <= fstatus.st_size &&
+							 req.range_start <= req.range_end  ) {
 							
 							// --- happy path ---
-					
+							
+							// correct ranges
+							if ( req.range_start < 0 ) {
+								req.range_start = 0;
+							}
+							if ( req.range_end < 0 ) {
+								req.range_end = fstatus.st_size;
+							}
+							
 							
 							// set content type
 							http_content_type_t contType = get_http_content_type(path);
@@ -311,16 +324,18 @@ int handle_client(int sd, char* root_dir)
 							strftime(lastStr, BUFSIZE, "%a, %d %b %Y %T GMT", ts);
 							res.last_modified = lastStr;
 					
-							// set content content
-							res.content_length = "1";
+							// set content length
+							char* rangeStr = malloc(BUFSIZE);
+							sprintf(rangeStr, "%d", (req.range_end - req.range_start)); 
+							res.content_length = rangeStr;
 							int file = open(path, O_RDONLY);
 							if ( file >= 0 ) {
 								char* buf = malloc(BUFSIZE);
 								
 								read_from_socket(file, buf, BUFSIZE, 1);
 								
-								res.content_length = malloc(BUFSIZE);
-								sprintf(res.content_length, "%d", (int)fstatus.st_size);
+								//res.content_length = malloc(BUFSIZE);
+								//sprintf(res.content_length, "%d", (int)fstatus.st_size);
 								
 								// set status okay
 								res.status = HTTP_STATUS_OK;
@@ -330,25 +345,27 @@ int handle_client(int sd, char* root_dir)
 								res.status = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 							}
 							
-						// else of last_modified of the resource		
-						}else{
-							// dont send the ressource, just 304 not modified
-							res.status = HTTP_STATUS_NOT_MODIFIED;
-							
-							
-							
-						}
+						}else{ /* else of range check */
+							// range is not satisfiable - 416
+							res.status = HTTP_STATUS_RANGE_NOT_SATISFIABLE;
+						}	
+					 		
+					}else{ /* else of last_modified of the resource */ 
+						// dont send the ressource, just 304 not modified
+						res.status = HTTP_STATUS_NOT_MODIFIED;
+					}
 				
-					}else{ /* else of file not accessible */
+				}else{ /* else of file not accessible */
 					// resource is not accessible - return 403 - forbidden
 					res.status = HTTP_STATUS_FORBIDDEN;
 					// directly write status to socket and exit
 					err = send_response(&res, sd);
 					if ( err < 0 ) {
-							safe_printf("Failed to send the response (403): %d\n", err);
-						}
-					} /* endif file accessible */
-				}else{
+						safe_printf("Failed to send the response (403): %d\n", err);
+					}
+				} /* endif file accessible */
+			
+			}else{
 				// resource doesn't exist - return 404 - not found
 				res.status = HTTP_STATUS_NOT_FOUND;
 				// directly write status to socket and exit
@@ -359,21 +376,20 @@ int handle_client(int sd, char* root_dir)
 				return 0;
 			}/* endif file exists */
 	
-				// else: 301..
-				}else{ /* else of check if exists */
-				// requested resource is a directory - respond 301
-				res.status = HTTP_STATUS_MOVED_PERMANENTLY;
-				// write path an add slash
-				strcat(path, "/\n\0");
-				res.location = path;
-				// directly write status to socket and exit
-				err = send_response(&res, sd);
-				if ( err < 0 ) {
-					safe_printf("Failed to send the response (301): %d\n", err);
-				}
-			}	
+		}else{ /* else of check if exists */
+			// requested resource is a directory - respond 301
+			res.status = HTTP_STATUS_MOVED_PERMANENTLY;
+			// write path an add slash
+			strcat(path, "/\n\0");
+			res.location = path;
+			// directly write status to socket and exit
+			err = send_response(&res, sd);
+			if ( err < 0 ) {
+				safe_printf("Failed to send the response (301): %d\n", err);
+			}
+		}	
 		
-		}else{ /* else of check directory */
+	}else{ /* else of check directory */
 		// return status 501 - not implemented
 		res.status = HTTP_STATUS_NOT_IMPLEMENTED;
 		// directly write status to socket and exit
@@ -390,7 +406,7 @@ int handle_client(int sd, char* root_dir)
 	err = send_response(&res, sd);
 	if ( err >= 0 ) {
 		if (req.method != HTTP_METHOD_HEAD && strlen(path) > 0) {
-			err = send_file_as_body(sd, path);		
+			err = send_file_as_body(sd, path, req.range_start, req.range_end);		
 			if (err < 0){
 				err_print("Failed to send response body!");
 			}
