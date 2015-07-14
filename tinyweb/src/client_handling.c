@@ -290,6 +290,11 @@ int handle_client(int sd, char* root_dir)
 						
 						// --- happy path ---
 						
+				// if not a directory
+					// if modified since timestamp from request
+						
+						//
+						
 						// set content type
 						http_content_type_t contType = get_http_content_type(path);
 						char* contStr = get_http_content_type_str(contType);
@@ -321,8 +326,8 @@ int handle_client(int sd, char* root_dir)
 							res.status = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 						}
 						
-						
-						
+					// else date nicht schicken	
+				// else: 301..		
 						
 						
 			}else{
