@@ -270,13 +270,9 @@ int handle_client(int sd, char* root_dir)
 		exit(-1);
 	}
 		
-	safe_printf("HTTP_STATUS_NOT_IMPLEMENTED: %s\n", http_method_list[req.method].name);
 	/* request handling ----------------------------------------------------------
 	 *
 	 * use positive logic within the if-statements
-	 *
-	 *
-	 * TODO: 	- check if directory and return location
 	 *			- check if CGI and execute
 	 *
 	 */
@@ -336,7 +332,8 @@ int handle_client(int sd, char* root_dir)
 							
 						// else of last_modified of the resource		
 						}else{
-							// dont send the ressource
+							// dont send the ressource, just 304 not modified
+							res.status = HTTP_STATUS_NOT_MODIFIED;
 							
 							
 							
@@ -363,11 +360,6 @@ int handle_client(int sd, char* root_dir)
 			}/* endif file exists */
 	
 				// else: 301..
-			
-			
-				
-			
-			
 				}else{ /* else of check if exists */
 				// requested resource is a directory - respond 301
 				res.status = HTTP_STATUS_MOVED_PERMANENTLY;
@@ -377,7 +369,7 @@ int handle_client(int sd, char* root_dir)
 				// directly write status to socket and exit
 				err = send_response(&res, sd);
 				if ( err < 0 ) {
-					safe_printf("Failed to send the response (403): %d\n", err);
+					safe_printf("Failed to send the response (301): %d\n", err);
 				}
 			}	
 		
