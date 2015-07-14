@@ -167,6 +167,18 @@ int send_response(http_res_t * response, int sd)
  	    	safe_printf("Error: Unable to write content_type to socket.\n");
  		}
  	}
+ 	
+ 	// get content_range and write to socket
+ 	if ( strcmp(response->content_range, "") ) {
+		char* content_range = (char*)malloc(BUFSIZE);
+ 		strcpy(content_range, "Content-Range: ");
+		strcat(content_range, response->content_range);
+ 		strcat(content_range, "\r\n");
+ 		err = write_to_socket(sd, content_range, strlen(content_range), WRITE_TIMEOUT);
+ 		if ( err < 0 ) {
+ 	    	safe_printf("Error: Unable to write content_range to socket.\n");
+ 		}
+ 	}
 	
 	// get connection and write to socket
 	if ( strcmp(response->connection, "") ) {
@@ -255,6 +267,7 @@ int handle_client(int sd, char* root_dir)
 	res.last_modified = "";
 	res.content_length = "";
     res.content_type = "";
+    res.content_range = "";
     res.connection = "";
     res.accept_ranges = "";
     res.location = "";
@@ -296,14 +309,23 @@ int handle_client(int sd, char* root_dir)
 					// if modified since timestamp from request
 					if ( fstatus.st_mtime > req.if_modified_since ) {
 						
+						safe_printf("Desired Range: %d - %d\n", req.range_start, req.range_end);
+						
 						// check if range is valid
 						if ( req.range_start <= fstatus.st_size &&
 							 req.range_end   <= fstatus.st_size &&
-							 req.range_start <= req.range_end  ) {
+							 (req.range_end < 0 || req.range_start <= req.range_end  ))
+							 {
 							
 							// --- happy path ---
 							
-							
+							// correct ranges
+							if ( req.range_start < 0 ) {
+								req.range_start = 0;
+							}
+							if ( req.range_end < 0 ) {
+								req.range_end = fstatus.st_size;
+							}
 							
 							
 							// set content type
@@ -322,8 +344,8 @@ int handle_client(int sd, char* root_dir)
 							char* rangeStr = malloc(BUFSIZE);
 							sprintf(rangeStr, "%d", (req.range_end - req.range_start)); 
 							res.content_length = rangeStr;
-							int file = open(path, O_RDONLY);
-							if ( file >= 0 ) {
+							/*int file = open(path, O_RDONLY);
+							  if ( file >= 0 ) {
 								char* buf = malloc(BUFSIZE);
 								
 								read_from_socket(file, buf, BUFSIZE, 1);
@@ -332,12 +354,19 @@ int handle_client(int sd, char* root_dir)
 								//sprintf(res.content_length, "%d", (int)fstatus.st_size);
 								
 								// set status okay
-								res.status = HTTP_STATUS_OK;
+								
 								
 							}else{
 								err_print("Resource could not be opened");
 								res.status = HTTP_STATUS_INTERNAL_SERVER_ERROR;
+							}*/
+							
+							if (req.range_start == 0 && req.range_end == fstatus.st_size){
+								res.status = HTTP_STATUS_OK;
+							} else {
+								res.status = HTTP_STATUS_PARTIAL_CONTENT;
 							}
+							
 							
 						}else{ /* else of range check */
 							// range is not satisfiable - 416
@@ -396,14 +425,7 @@ int handle_client(int sd, char* root_dir)
 		return 0;
 	} /* endif GET HEAD */
 
-	// correct ranges
-	if ( req.range_start < 0 ) {
-		req.range_start = 0;
-	}
-	if ( req.range_end < 0 ) {
-		req.range_end = fstatus.st_size;
-	}
-	
+
 	// build header lines and send response
 	err = send_response(&res, sd);
 	if ( err >= 0 ) {

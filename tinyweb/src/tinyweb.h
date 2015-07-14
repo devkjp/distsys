@@ -58,6 +58,7 @@ typedef struct http_res {
     char*       	last_modified;
     char*       	content_length;
     char*       	content_type;
+    char* 			content_range;
     char*       	connection;
     char*       	accept_ranges;
     char*       	location;
