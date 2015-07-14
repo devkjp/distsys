@@ -269,6 +269,7 @@ int handle_client(int sd, char* root_dir)
 	{
 		exit(-1);
 	}
+	struct stat fstatus;
 		
 	/* request handling ----------------------------------------------------------
 	 *
@@ -281,7 +282,6 @@ int handle_client(int sd, char* root_dir)
 		
 		// get the correct path
 		path = get_path(root_dir, req.resource);
-		struct stat fstatus;
 		int stat_return = stat(path, &fstatus);
 		
 		// check if is not a directory
@@ -303,13 +303,7 @@ int handle_client(int sd, char* root_dir)
 							
 							// --- happy path ---
 							
-							// correct ranges
-							if ( req.range_start < 0 ) {
-								req.range_start = 0;
-							}
-							if ( req.range_end < 0 ) {
-								req.range_end = fstatus.st_size;
-							}
+							
 							
 							
 							// set content type
@@ -363,6 +357,7 @@ int handle_client(int sd, char* root_dir)
 					if ( err < 0 ) {
 						safe_printf("Failed to send the response (403): %d\n", err);
 					}
+					return 0;
 				} /* endif file accessible */
 			
 			}else{
@@ -387,6 +382,7 @@ int handle_client(int sd, char* root_dir)
 			if ( err < 0 ) {
 				safe_printf("Failed to send the response (301): %d\n", err);
 			}
+			return 0;
 		}	
 		
 	}else{ /* else of check directory */
@@ -400,12 +396,20 @@ int handle_client(int sd, char* root_dir)
 		return 0;
 	} /* endif GET HEAD */
 
+	// correct ranges
+	if ( req.range_start < 0 ) {
+		req.range_start = 0;
+	}
+	if ( req.range_end < 0 ) {
+		req.range_end = fstatus.st_size;
+	}
 	
-
 	// build header lines and send response
 	err = send_response(&res, sd);
 	if ( err >= 0 ) {
-		if (req.method != HTTP_METHOD_HEAD && strlen(path) > 0) {
+		if (req.method != HTTP_METHOD_HEAD && 
+			strlen(path) > 0 && 
+			res.status != HTTP_STATUS_MOVED_PERMANENTLY) {
 			err = send_file_as_body(sd, path, req.range_start, req.range_end);		
 			if (err < 0){
 				err_print("Failed to send response body!");

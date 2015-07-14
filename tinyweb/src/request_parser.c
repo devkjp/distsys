@@ -23,6 +23,7 @@ int parse_header(char * buffer, http_req_t * request)
 			header_string[walker-buffer] = '\0';
 			buffer = walker + 1;
 			walker = strstr(buffer, "\r\n");
+			safe_printf("Header: %s\n", header_string);
 			if (strcmp(header_string, "Range") == 0){	
 				if (walker)	{	
 					strncpy(header_value, buffer, walker-buffer);
@@ -150,12 +151,14 @@ int parse_request(http_req_t * request, char *req_string)
 	request->if_modified_since = 0;
 	request->range_start = -1;
 	request->range_end = -1;
+	
 
 	int err = parse_method(buffer, request);
 	if (err < 0 )
 	{
 		safe_printf("Error on parsing request!\n");
 	}
+	print_log("Parser says: range from %d to %d\n", request->range_start, request->range_end);
 	free(buffer);
 	return err;
 }
