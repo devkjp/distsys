@@ -64,5 +64,18 @@ typedef struct http_res {
     char*			body;
 } http_res_t;
 
+/*
+ * struct to store logging information
+ */
+typedef struct http_log {
+	char* 		client_ip;
+	char* 		client_port;
+	char* 		http_method;
+	char* 		timestamp;
+	char*		resource_name;
+	char* 		status;
+	char*		bytes;
+} http_log_t
+
 #endif
 
