@@ -216,19 +216,13 @@ int send_response(http_res_t * response, int sd)
  		}
  	}
  	
- 	// append new line
- 	char* newline = (char*)malloc(BUFSIZE);
- 	strcpy(newline, "\r\n");
- 	err = write_to_socket(sd, newline, strlen(newline), WRITE_TIMEOUT);
- 	if ( err < 0 ) {
- 	    safe_printf("Error: Unable to write new line to socket.\n");
- 	}
+
  	
 	// get body and write to socket
 	if ( strcmp(response->body, "") ) {
 		char* body = (char*)malloc(BUFSIZE);
  		strcpy(body, response->body);
- 		strcat(body, "\r\n\0");
+ 		//strcat(body, "\r\n\0");
  		err = write_to_socket(sd, body, strlen(body), WRITE_TIMEOUT);
  		if ( err < 0 ) {
  	    	safe_printf("Error: Unable to write body to socket.\n");

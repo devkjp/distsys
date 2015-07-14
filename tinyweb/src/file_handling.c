@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <safe_print.h>
 #include <tinyweb.h>
+#include <string.h>
 
 #define BUFSIZE 100000
 #define CHUNK_SIZE 16000
@@ -26,6 +27,14 @@ send_file_as_body(int sd, char * path, int range_start, int range_end)
 	char * buf = malloc(BUFSIZE);
 	int fd = open(path, O_RDONLY);
 	int err;
+	
+	// append new line
+ 	char* newline = (char*)malloc(BUFSIZE);
+ 	strcpy(newline, "\r\n");
+ 	err = write_to_socket(sd, newline, strlen(newline), 1);
+ 	if ( err < 0 ) {
+ 	    safe_printf("Error: Unable to write new line to socket.\n");
+ 	}
 	
 	safe_printf("Range Start is: %d Range stop is %d!\n", range_start, range_end);
 	
@@ -92,10 +101,8 @@ process_cgi(char * path)
 		dup2(pipeline[1], STDOUT_FILENO);
 		//dup2(pipeline[1], STDERR_FILENO);
 		
-		safe_printf("Duplicated STDOUT and STDERR!\n");
-		
 		/* Set Environment and Excecute CGI Script */
-		execle("/bin/bash", path, NULL, NULL);
+		execle("/bin/sh", "sh", "-c", path, NULL, NULL);
 		
 		exit(0);
 		
