@@ -34,6 +34,7 @@
 #include <safe_print.h>
 #include <sem_print.h>
 #include <content.h>
+#include <file_handling.h>
 
 #define BUFSIZE 100000
 #define WRITE_TIMEOUT 1000
@@ -258,6 +259,7 @@ int handle_client(int sd, char* root_dir)
     res.accept_ranges = "";
     res.location = "";
     res.body = "";
+    char* path = "";
 
 	// read the request from the socket
 	read_from_socket(sd, req_string, BUFSIZE, 1);
@@ -281,16 +283,19 @@ int handle_client(int sd, char* root_dir)
 	// check http method if its GET or HEAD
 	if ( req.method == HTTP_METHOD_GET || req.method == HTTP_METHOD_HEAD ) {
 		// check if file exists
-		char* path = get_path(root_dir, req.resource);
+		path = get_path(root_dir, req.resource);
 		struct stat fstatus;
 		int stat_return = stat(path, &fstatus);
+		
+	// check if is not a directory
+	if ( !(fstatus.st_mode & S_IFDIR) ) {	
+		
 		if ( stat_return >= 0 && S_ISREG(fstatus.st_mode) ) { 
 			//check if file is accessible (read rights)
 			if ( fstatus.st_mode & S_IROTH ) { 
-				// check if is not a directory
-				if ( !(fstatus.st_mode & S_IFDIR) ) {
+				
 					// if modified since timestamp from request
-					//if (  )
+					//if ( fstatus. )
 						
 						// --- happy path ---
 				
@@ -327,19 +332,7 @@ int handle_client(int sd, char* root_dir)
 						}
 						
 					// else date nicht schicken	
-				// else: 301..
-				}else{
-					// requested resource is a directory - respond 301
-					res.status = HTTP_STATUS_MOVED_PERMANENTLY;
-					// write path an add slash
-					strcat(path, "/\n\0");
-					res.body = path;
-					// directly write status to socket and exit
-					err = send_response(&res, sd);
-					if ( err < 0 ) {
-						safe_printf("Failed to send the response (403): %d\n", err);
-					}
-				}
+
 				
 			}else{
 				// resource is not accessible - return 403 - forbidden
@@ -360,6 +353,21 @@ int handle_client(int sd, char* root_dir)
 			}
 			return 0;
 		}/* endif file exists */
+	
+					// else: 301..
+				}else{
+					// requested resource is a directory - respond 301
+					res.status = HTTP_STATUS_MOVED_PERMANENTLY;
+					// write path an add slash
+					strcat(path, "/\n\0");
+					res.location = path;
+					// directly write status to socket and exit
+					err = send_response(&res, sd);
+					if ( err < 0 ) {
+						safe_printf("Failed to send the response (403): %d\n", err);
+					}
+				}	
+		
 	}else{
 		// return status 501 - not implemented
 		res.status = HTTP_STATUS_NOT_IMPLEMENTED;
@@ -371,12 +379,20 @@ int handle_client(int sd, char* root_dir)
 		return 0;
 	} /* endif GET HEAD */
 
+	
 
 	// build header lines and send response
 	err = send_response(&res, sd);
-	if ( err < 0 ) {
-		safe_printf("Failed to send the response: %d\n", err);
-	}
+	if ( err >= 0 ) {
+		if (req.method != HTTP_METHOD_HEAD && strlen(path) > 0) {
+			err = send_file_as_body(sd, path);		
+			if (err < 0){
+				err_print("Failed to send response body!");
+			}
+		} 
+	} else {
+		err_print("Failed to send response header!");
+ 	}
 	return 0;
 }
 
