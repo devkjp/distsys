@@ -282,93 +282,100 @@ int handle_client(int sd, char* root_dir)
 	 */
 	// check http method if its GET or HEAD
 	if ( req.method == HTTP_METHOD_GET || req.method == HTTP_METHOD_HEAD ) {
-		// check if file exists
+		
+		// get the correct path
 		path = get_path(root_dir, req.resource);
 		struct stat fstatus;
 		int stat_return = stat(path, &fstatus);
 		
-	// check if is not a directory
-	if ( !(fstatus.st_mode & S_IFDIR) ) {	
-		
-		if ( stat_return >= 0 && S_ISREG(fstatus.st_mode) ) { 
-			//check if file is accessible (read rights)
-			if ( fstatus.st_mode & S_IROTH ) { 
-				
-					// if modified since timestamp from request
-					//if ( fstatus. )
+		// check if is not a directory
+		if ( !(fstatus.st_mode & S_IFDIR) ) {	
+			
+			// check if it exists
+			if ( stat_return >= 0 && S_ISREG(fstatus.st_mode) ) { 
+				//check if file is accessible (read rights)
+				if ( fstatus.st_mode & S_IROTH ) { 
+					
+						// if modified since timestamp from request
+						//if ( fstatus. )
+							
+							// --- happy path ---
+					
+							
+							// set content type
+							http_content_type_t contType = get_http_content_type(path);
+							char* contStr = get_http_content_type_str(contType);
+							res.content_type = contStr;
+							
+							// set last_modified
+							struct tm *ts;
+							char* lastStr = malloc(BUFSIZE);
+							ts = localtime(&fstatus.st_mtim.tv_sec);
+							strftime(lastStr, BUFSIZE, "%a, %d %b %Y %T GMT", ts);
+							res.last_modified = lastStr;
+					
+							// set content content
+							res.content_length = "1";
+							int file = open(path, O_RDONLY);
+							if ( file >= 0 ) {
+								char* buf = malloc(BUFSIZE);
+								
+								read_from_socket(file, buf, BUFSIZE, 1);
+								
+								res.content_length = malloc(BUFSIZE);
+								sprintf(res.content_length, "%d", (int)fstatus.st_size);
+								
+								// set status okay
+								res.status = HTTP_STATUS_OK;
+								
+							}else{
+								err_print("Resource could not be opened");
+								res.status = HTTP_STATUS_INTERNAL_SERVER_ERROR;
+							}
+							
+						// else date nicht schicken			
 						
-						// --- happy path ---
 				
-						
-						// set content type
-						http_content_type_t contType = get_http_content_type(path);
-						char* contStr = get_http_content_type_str(contType);
-						res.content_type = contStr;
-						
-						// set last_modified
-						struct tm *ts;
-						char* lastStr = malloc(BUFSIZE);
-						ts = localtime(&fstatus.st_mtim.tv_sec);
-						strftime(lastStr, BUFSIZE, "%a, %d %b %Y %T GMT", ts);
-						res.last_modified = lastStr;
-				
-						// set content content
-						res.content_length = "1";
-						int file = open(path, O_RDONLY);
-						if ( file >= 0 ) {
-							char* buf = malloc(BUFSIZE);
-							
-							read_from_socket(file, buf, BUFSIZE, 1);
-							
-							res.content_length = malloc(BUFSIZE);
-							sprintf(res.content_length, "%d", (int)fstatus.st_size);
-							
-							// set status okay
-							res.status = HTTP_STATUS_OK;
-							
-						}else{
-							err_print("Resource could not be opened");
-							res.status = HTTP_STATUS_INTERNAL_SERVER_ERROR;
+				}else{
+					// resource is not accessible - return 403 - forbidden
+					res.status = HTTP_STATUS_FORBIDDEN;
+					// directly write status to socket and exit
+					err = send_response(&res, sd);
+					if ( err < 0 ) {
+							safe_printf("Failed to send the response (403): %d\n", err);
 						}
-						
-					// else date nicht schicken	
-
+					} /* endif file accessible */
+				}else{
+				// resource doesn't exist - return 404 - not found
+				res.status = HTTP_STATUS_NOT_FOUND;
+				// directly write status to socket and exit
+				err = send_response(&res, sd);
+				if ( err < 0 ) {
+					safe_printf("Failed to send the response (404): %d\n", err);
+				}
+				return 0;
+				}/* endif file exists */
+	
+				// else: 301..
+			
+			
 				
-			}else{
-				// resource is not accessible - return 403 - forbidden
-				res.status = HTTP_STATUS_FORBIDDEN;
+			
+			
+				}else{ /* else of check if exists */
+				// requested resource is a directory - respond 301
+				res.status = HTTP_STATUS_MOVED_PERMANENTLY;
+				// write path an add slash
+				strcat(path, "/\n\0");
+				res.location = path;
 				// directly write status to socket and exit
 				err = send_response(&res, sd);
 				if ( err < 0 ) {
 					safe_printf("Failed to send the response (403): %d\n", err);
 				}
-			} /* endif file accessible */
-		}else{
-			// resource doesn't exist - return 404 - not found
-			res.status = HTTP_STATUS_NOT_FOUND;
-			// directly write status to socket and exit
-			err = send_response(&res, sd);
-			if ( err < 0 ) {
-				safe_printf("Failed to send the response (404): %d\n", err);
-			}
-			return 0;
-		}/* endif file exists */
-	
-					// else: 301..
-				}else{
-					// requested resource is a directory - respond 301
-					res.status = HTTP_STATUS_MOVED_PERMANENTLY;
-					// write path an add slash
-					strcat(path, "/\n\0");
-					res.location = path;
-					// directly write status to socket and exit
-					err = send_response(&res, sd);
-					if ( err < 0 ) {
-						safe_printf("Failed to send the response (403): %d\n", err);
-					}
-				}	
+			}	
 		
-	}else{
+		}else{ /* else of check directory */
 		// return status 501 - not implemented
 		res.status = HTTP_STATUS_NOT_IMPLEMENTED;
 		// directly write status to socket and exit
