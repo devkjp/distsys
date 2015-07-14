@@ -162,6 +162,8 @@ get_options(int argc, char *argv[], prog_options_t *opt)
                     fprintf(stderr, "Cannot resolve service '%s': %s\n", optarg, gai_strerror(err));
                     return EXIT_FAILURE;
                 } /* end if */
+                // Copy port to opt struct server port
+                opt->server_port = (int) ntohs(((struct sockaddr_in*) opt->server_addr->ai_addr)->sin_port);
                 break;
             case 'd':
                 // 'optarg contains root directory */
@@ -287,9 +289,8 @@ main(int argc, char *argv[])
     char* root_dir = my_opt.root_dir;
     
     // start the server and create socket
-    unsigned short PORT = 8080;
     print_log("Starting server '%s'...\n", my_opt.progname);
-    int accepting_socket = passive_tcp(PORT, 5);
+    int accepting_socket = passive_tcp(my_opt.server_port, 5);
     if (accepting_socket < 0){
         err_print("Error when opening accepting socket!");
         exit(-1);
