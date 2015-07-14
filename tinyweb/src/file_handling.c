@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <socket_io.h>
+#include <stdio.h>
 
 #define BUFSIZE 100000
 
@@ -17,13 +18,18 @@
  * return value:	zero if okay, anything else if not
 */
 int 
-send_file_as_body(int sd, char * path)
+send_file_as_body(int sd, char * path, int range_start, int range_end)
 {	
 	char * buf = malloc(BUFSIZE);
 	int fd = open(path, O_RDONLY);
+	
+	// jump to range_start in file
+	lseek(fd, range_start, SEEK_SET);
+	
 	if (fd >= 0){
 		int cc;
-		while((cc = read(fd, buf, BUFSIZE))){
+		int left = range_end - range_start;
+		while(left > 0 && (cc = read(fd, buf, left))){
 			if (cc<0){ /* Error on Read */
 				return cc;
 			}
@@ -31,6 +37,7 @@ send_file_as_body(int sd, char * path)
 			if (err < 0){ /* Error on Write */
 				return err;
 			}
+			left -= cc;
 		}
 	} else { /* Error on Open */
 		return fd;
