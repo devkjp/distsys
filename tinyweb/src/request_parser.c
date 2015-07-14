@@ -1,7 +1,12 @@
+#define __USE_XOPEN
+#define _GNU_SOURCE
+
 #include <safe_print.h>
 #include <string.h>
 #include <tinyweb.h>
 #include <sem_print.h>
+#include <time.h>
+#include <stdlib.h>
 
 #define BUFSIZE 1000
 
@@ -11,20 +16,15 @@ int parse_header(char * buffer, http_req_t * request)
 	char * header_value = malloc(BUFSIZE);
 	if(buffer == (strstr(buffer, "\r\n"))){
 		return 0; // Done with parsing
-	} 
-	else
-	{
+	} else {
 		char * walker = strstr(buffer, ":");
-		if (walker)
-		{
+		if (walker)	{
 			strncpy(header_string, buffer, walker-buffer);
 			header_string[walker-buffer] = '\0';
 			buffer = walker + 1;
 			walker = strstr(buffer, "\r\n");
-			safe_printf("Header: %s\n", header_string);
 			if (strcmp(header_string, "Range") == 0){	
-				if (walker)
-				{	
+				if (walker)	{	
 					strncpy(header_value, buffer, walker-buffer);
 					// Get first number
 					char * w = header_value;
@@ -46,20 +46,21 @@ int parse_header(char * buffer, http_req_t * request)
 					}
 					
 					header_value[walker-buffer] = '\0';
-				} 
-				else 
-				{
+				} else 	{
 					return -1;
 				}
 			} else if (strcmp(header_string, "If-Modified-Since") == 0)	{	
-				if (walker)
-				{	
+				if (walker)	{	
+					buffer +=1;
 					strncpy(header_value, buffer, walker-buffer);
 					header_value[walker-buffer] = '\0';
-					safe_printf("If-Modified_since: %s\n", header_value);
-				} 
-				else 
-				{
+					struct tm imTimestamp;
+					if( (strptime(header_value, "%a, %d %b %Y %T GMT", &imTimestamp)) != NULL){
+						request->if_modified_since = timegm(&imTimestamp);
+					} else {
+						return -1;
+					}
+				} else {
 					return -1;
 				}
 			} else if (strcmp(header_string, "") == 0) {
@@ -67,21 +68,15 @@ int parse_header(char * buffer, http_req_t * request)
 			}
 
 			walker = strstr(buffer, "\r\n");
-			if (walker)
-			{	
+			if (walker)	{	
 				free(header_string);
 				return parse_header(walker+2, request);
-			}
-			else
-			{	
+			}else{	
 				free(header_string);
 				return -1;
 			}
-					
-		}
-		else
-		{
-				free(header_string);
+		} else {
+			free(header_string);
 			return -1;
 		}
 	}
@@ -161,7 +156,6 @@ int parse_request(http_req_t * request, char *req_string)
 		safe_printf("Error on parsing request!\n");
 	}
 	free(buffer);
-	print_log("RANGE: %d - %d\n", request->range_start, request->range_end);
 	return err;
 }
 
