@@ -42,9 +42,10 @@ typedef struct prog_options {
  */
 typedef struct http_req {
     http_method_t       method;
-    char*               resource;
-    char*               range;    
-    char*               if_modified_since;
+    char *              resource;
+    int        range_start;
+    int        range_end;    
+    time_t              if_modified_since;
 } http_req_t;
 
 /*
