@@ -34,6 +34,7 @@ int parse_header(char * buffer, http_req_t * request)
 						char * first_number = malloc(BUFSIZE);
 						strncpy(first_number, header_value, w - header_value);
 						first_number[w-header_value] = '\0';
+						request->range_start = atoi(first_number);
 					}
 					// Get second number
 					header_value = w;
@@ -41,6 +42,7 @@ int parse_header(char * buffer, http_req_t * request)
 					if(strlen(header_value) > 0){
 						char * second_number = malloc(BUFSIZE);
 						strncpy(second_number, header_value, strlen(header_value));
+						request->range_end = atoi(second_number);
 					}
 					
 					header_value[walker-buffer] = '\0';
