@@ -34,7 +34,6 @@
 #include <safe_print.h>
 #include <sem_print.h>
 #include <content.h>
-#include <file_handling.h>
 
 #define BUFSIZE 100000
 #define WRITE_TIMEOUT 1000
@@ -226,8 +225,6 @@ int send_response(http_res_t * response, int sd)
 	return 0;
 }
 
-
-
 /*
  * function:		handle_client
  * purpose:			concatenate the header lines and write them to the socket if they exist
@@ -236,8 +233,7 @@ int send_response(http_res_t * response, int sd)
  * globals used:	-
  * return value:	zero if okay, anything else if not
 */
-int 
-handle_client(int sd, char* root_dir)
+int handle_client(int sd, char* root_dir)
 {	 
 	int err = 0;
 	http_req_t req;
@@ -262,11 +258,9 @@ handle_client(int sd, char* root_dir)
     res.accept_ranges = "";
     res.location = "";
     res.body = "";
-	
-	char * path = "";
-	
+
 	// read the request from the socket
-	read_from_socket(sd, req_string, BUFSIZE, 10);
+	read_from_socket(sd, req_string, BUFSIZE, 1);
 
 	err = parse_request(&req, req_string);
 	if (err < 0)
@@ -287,19 +281,19 @@ handle_client(int sd, char* root_dir)
 	// check http method if its GET or HEAD
 	if ( req.method == HTTP_METHOD_GET || req.method == HTTP_METHOD_HEAD ) {
 		// check if file exists
-		path = get_path(root_dir, req.resource);
+		char* path = get_path(root_dir, req.resource);
 		struct stat fstatus;
 		int stat_return = stat(path, &fstatus);
 		if ( stat_return >= 0 && S_ISREG(fstatus.st_mode) ) { 
 			//check if file is accessible (read rights)
 			if ( fstatus.st_mode & S_IROTH ) { 
+				// check if is not a directory
+				if ( !(fstatus.st_mode & S_IFDIR) ) {
+					// if modified since timestamp from request
+					//if (  )
 						
 						// --- happy path ---
-						
-				// if not a directory
-					// if modified since timestamp from request
-						
-						//
+				
 						
 						// set content type
 						http_content_type_t contType = get_http_content_type(path);
@@ -333,9 +327,20 @@ handle_client(int sd, char* root_dir)
 						}
 						
 					// else date nicht schicken	
-				// else: 301..		
-						
-						
+				// else: 301..
+				}else{
+					// requested resource is a directory - respond 301
+					res.status = HTTP_STATUS_MOVED_PERMANENTLY;
+					// write path an add slash
+					strcat(path, "/\n\0");
+					res.body = path;
+					// directly write status to socket and exit
+					err = send_response(&res, sd);
+					if ( err < 0 ) {
+						safe_printf("Failed to send the response (403): %d\n", err);
+					}
+				}
+				
 			}else{
 				// resource is not accessible - return 403 - forbidden
 				res.status = HTTP_STATUS_FORBIDDEN;
@@ -369,15 +374,8 @@ handle_client(int sd, char* root_dir)
 
 	// build header lines and send response
 	err = send_response(&res, sd);
-	if ( err >= 0 ) {
-		if (req.method != HTTP_METHOD_HEAD && strlen(path) > 0) {
-			err = send_file_as_body(sd, path);		
-			if (err < 0){
-				err_print("Failed to send response body!");
-			}
-		} 
-	} else {
-		err_print("Failed to send response header!");
+	if ( err < 0 ) {
+		safe_printf("Failed to send the response: %d\n", err);
 	}
 	return 0;
 }
