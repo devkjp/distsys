@@ -147,6 +147,7 @@ int parse_request(http_req_t * request, char *req_string)
 	char * buffer = malloc(BUFSIZE);
 	strncpy(buffer, req_string, strlen(req_string));
 	
+	request->if_modified_since = 0;
 	request->range_start = -1;
 	request->range_end = -1;
 
