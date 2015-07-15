@@ -1,7 +1,14 @@
-//
-// TODO: Include your module header here
-//
-
+/*===================================================================
+ * DHBW Ravensburg - Campus Friedrichshafen
+ *
+ * Vorlesung Verteilte Systeme
+ * 
+ * Gruppe:  1 - Reutebuch, Schulvbz, Polkehn
+ * Author:  Polkehn, Schulz, Reutebuch
+ *
+ * tinyweb.h
+ *
+ *===================================================================*/
 #ifndef _TINYWEB_H
 #define _TINYWEB_H
 

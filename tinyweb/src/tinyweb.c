@@ -2,15 +2,15 @@
  * DHBW Ravensburg - Campus Friedrichshafen
  *
  * Vorlesung Verteilte Systeme
+ * 
+ * Author: Ralf Reutemann
  *
- * Author:  Ralf Reutemann
+ * Gruppe:  1 - Reutebuch, Schulz, Polkehn
+ * Editors:  Polkehn, Schulz, Reutebuch
+ *
+ * tinyweb.c
  *
  *===================================================================*/
-//
-// TODO: Include your module header here
-//
-
-
 #include <stdio.h>
 #include <time.h>
 #include <sys/types.h>
@@ -317,6 +317,9 @@ main(int argc, char *argv[])
 {
     int retcode = EXIT_SUCCESS;
     prog_options_t my_opt;
+    
+    // prepare struct for logging information
+    //http_log_t logging;
 
     // read program options
     if (get_options(argc, argv, &my_opt) == 0) {

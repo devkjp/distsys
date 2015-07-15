@@ -1,0 +1,14 @@
+t/00date.t ...... ok
+t/00server.t .... ok
+t/00status.t .... ok
+t/01methods.t ... ok
+t/02basic.t ..... ok
+t/02mime.t ...... ok
+t/02zero.t ...... ok
+t/03moved.t ..... ok
+t/04modsince.t .. ok
+t/04range.t ..... ok
+t/05cgi.t ....... ok
+All tests successful.
+Files=11, Tests=82,  2 wallclock secs ( 0.06 usr  0.01 sys +  1.57 cusr  0.34 csys =  1.98 CPU)
+Result: PASS

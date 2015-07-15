@@ -4,7 +4,7 @@
  * Vorlesung Verteilte Systeme
  * 
  * Gruppe:  1 - Reutebuch, Schulvbz, Polkehn
- * Author:  Polkehn
+ * Author:  Polkehn, Schulz, Reutebuch
  *
  *===================================================================*/
  
@@ -291,6 +291,13 @@ int handle_client(int sd, char* root_dir)
 		path = get_path(root_dir, req.resource);
 		int stat_return = stat(path, &fstatus);
 		
+		//FILE* file = fopen(path, "r");
+		//bool accessible_file = false;
+	//	if ( file ) {
+       // 	fclose(file);
+        //	accessible_file = true;
+    //	}
+    
 		// check if is not a directory
 		if ( !(fstatus.st_mode & S_IFDIR) ) {	
 			
