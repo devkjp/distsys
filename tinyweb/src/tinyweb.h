@@ -24,7 +24,9 @@
 #define BUFFER_SIZE                      8192
 #define DEFAULT_HTML_PAGE      "default.html"
 
-
+/*
+ * struct to store program parameters
+ */
 typedef struct prog_options {
     char               *progname;
     char               *root_dir;
@@ -64,6 +66,19 @@ typedef struct http_res {
     char*       	location;
     char*			body;
 } http_res_t;
+
+/*
+ * struct to store http_response
+ */
+typedef struct http_log {
+    char*       	client_ip;
+    char*       	client_port;
+    char*       	http_method;
+    char*       	timestamp;
+    char*       	resource;
+    char* 			http_status;
+    char*       	bytes;
+} http_log_t;
 
 #endif
 
