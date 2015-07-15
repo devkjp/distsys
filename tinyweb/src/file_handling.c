@@ -33,10 +33,8 @@ send_file_as_body(int sd, char * path, int range_start, int range_end)
  	strcpy(newline, "\r\n");
  	err = write_to_socket(sd, newline, strlen(newline), 1);
  	if ( err < 0 ) {
- 	    safe_printf("Error: Unable to write new line to socket.\n");
+ 	    err_print("Error: Unable to write new line to socket.\n");
  	}
-	
-	safe_printf("Range Start is: %d Range stop is %d!\n", range_start, range_end);
 	
 	// jump to range_start in file
 	if (range_start > 0) {
@@ -94,9 +92,7 @@ process_cgi(char * path)
 		if (err < 0 ){
 			exit(-1);
 		}
-		
-		safe_printf("Forked. Child Process here.\n");
-		
+
 		/* Duplicate stdout and stderr to pipe */
 		dup2(pipeline[1], STDOUT_FILENO);
 		//dup2(pipeline[1], STDERR_FILENO);
