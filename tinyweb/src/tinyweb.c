@@ -43,6 +43,7 @@
 #include "safe_print.h"
 #include "sem_print.h"
 
+#define STRBUFSIZE 100
 
 // Must be true for the server accepting clients,
 // otherwise, the server will terminate
@@ -319,8 +320,15 @@ main(int argc, char *argv[])
     prog_options_t my_opt;
     
     // prepare struct for logging information
-    //http_log_t logging;
-
+    http_log_t logging;
+    logging.client_ip = malloc(STRBUFSIZE);
+    logging.client_port = malloc(STRBUFSIZE);
+    logging.http_method = malloc(STRBUFSIZE);
+    logging.timestamp = malloc(STRBUFSIZE);
+    logging.resource = malloc(STRBUFSIZE);
+    logging.http_status = malloc(STRBUFSIZE);
+    logging.bytes = malloc(STRBUFSIZE);
+	
     // read program options
     if (get_options(argc, argv, &my_opt) == 0) {
         print_usage(my_opt.progname);
@@ -357,6 +365,12 @@ main(int argc, char *argv[])
         socklen_t from_client_len = sizeof(from_client);
         int listening_socket = accept(accepting_socket, (struct sockaddr *) &from_client, &from_client_len);
         
+        // log client ip and port:
+        // write client ip into logging struct
+        inet_ntop(AF_INET, &(from_client.sin_addr), logging.client_ip, INET_ADDRSTRLEN);
+        sprintf(logging.client_port, "%d", from_client.sin_port);
+        
+       
         if (listening_socket >= 0){ /* Accept was ok */
             ++req_no;
             pid_t pid = fork();
@@ -364,7 +378,7 @@ main(int argc, char *argv[])
             { /* Child Process */
                 print_log("Process created to handle new request #%d\n", req_no);
                 close(accepting_socket);            
-                handle_client(listening_socket, root_dir);
+                handle_client(listening_socket, root_dir, logging, my_opt.log_fd);
                 exit(0);
             } 
             else if (pid > 0) 

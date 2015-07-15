@@ -232,6 +232,33 @@ int send_response(http_res_t * response, int sd)
 	return 0;
 }
 
+
+/*
+ * function:		write_log
+ * purpose:			write previously collected log information
+ * IN:				http_log_t logging - struct with logging information
+ *					FILE* log_fd - file descriptor to logfile
+ * OUT:				-
+ * globals used:	-
+ * return value:	zero if okay, negative if something went wrong
+*/
+int write_log(http_log_t logging, FILE* log_fd) {
+	char* nextLine = malloc(BUFSIZE);
+	
+	// 192.168.0.99 - - [13/Jun/2014:07:24:30 +0200] "GET /index.html HTTP/1.1" 206 1004
+	sprintf(nextLine, "%s:%s -- [%s] \"%s %s HTTP/1.1\" %s %s\n", 
+				logging.client_ip, 
+				logging.client_port,
+				logging.timestamp,
+				logging.http_method,
+				logging.resource,
+				logging.http_status,
+				logging.bytes );
+	
+	return fwrite(nextLine, sizeof(char), strlen(nextLine), log_fd);
+}
+	
+
 /*
  * function:		handle_client
  * purpose:			concatenate the header lines and write them to the socket if they exist
@@ -240,7 +267,7 @@ int send_response(http_res_t * response, int sd)
  * globals used:	-
  * return value:	zero if okay, anything else if not
 */
-int handle_client(int sd, char* root_dir)
+int handle_client(int sd, char* root_dir, http_log_t logging, FILE* log_fd)
 {	 
 	int err = 0;
 	http_req_t req;
@@ -268,6 +295,12 @@ int handle_client(int sd, char* root_dir)
     res.body = "";
     char* path = "";
 
+	// copy timestamp to logging struct
+	logging.timestamp = res.date;
+	
+	// set initial status for logging struct
+	sprintf(logging.http_status, "%d", http_status_list[HTTP_STATUS_INTERNAL_SERVER_ERROR].code);
+	
 	// read the request from the socket
 	read_from_socket(sd, req_string, BUFSIZE, 1);
 
@@ -276,6 +309,12 @@ int handle_client(int sd, char* root_dir)
 	{
 		exit(-1);
 	}
+	
+	// write available info to logging struct
+	logging.http_method = http_method_list[req.method].name;
+	logging.resource = req.resource;
+	
+	
 	struct stat fstatus;
 		
 	/* request handling ----------------------------------------------------------
@@ -290,7 +329,18 @@ int handle_client(int sd, char* root_dir)
 		// get the correct path
 		path = get_path(root_dir, req.resource);
 		int stat_return = stat(path, &fstatus);
-		
+		if ( stat_return < 0 ) {
+			res.status = HTTP_STATUS_NOT_FOUND;
+			sprintf(logging.http_status, "%d", http_status_list[HTTP_STATUS_NOT_FOUND].code);
+			// directly write status to socket and exit
+			err = send_response(&res, sd);
+			if ( err < 0 ) {
+				safe_printf("Failed to send the response (403): %d\n", err);
+			}
+			write_log(logging, log_fd);
+			return 0;
+			
+		}
 		//FILE* file = fopen(path, "r");
 		//bool accessible_file = false;
 	//	if ( file ) {
@@ -309,8 +359,6 @@ int handle_client(int sd, char* root_dir)
 					
 					// if modified since timestamp from request
 					if ( fstatus.st_mtime > req.if_modified_since ) {
-						
-						safe_printf("Desired Range: %d - %d\n", req.range_start, req.range_end);
 						
 						// check if cgi needs to be processed
 						if(req.resource != strstr(req.resource, "/cgi-bin"))
@@ -354,11 +402,14 @@ int handle_client(int sd, char* root_dir)
 								char* rangeStr = malloc(BUFSIZE);
 								sprintf(rangeStr, "%d", (req.range_end - req.range_start)); 
 								res.content_length = rangeStr;
-
+								logging.bytes = rangeStr;
+								
 								if (! isPartial){
 									res.status = HTTP_STATUS_OK;
+									sprintf(logging.http_status, "%d", http_status_list[HTTP_STATUS_OK].code);
 								} else {
 									res.status = HTTP_STATUS_PARTIAL_CONTENT;
+									sprintf(logging.http_status, "%d", http_status_list[HTTP_STATUS_PARTIAL_CONTENT].code);
 									char * content_range_str = malloc(BUFSIZE);
 									sprintf(content_range_str, "bytes %d-%d/%d", req.range_start, req.range_end-1, (int) fstatus.st_size);
 									res.content_range = content_range_str;
@@ -367,6 +418,7 @@ int handle_client(int sd, char* root_dir)
 							}else{ /* else of range check */
 								// range is not satisfiable - 416
 								res.status = HTTP_STATUS_RANGE_NOT_SATISFIABLE;
+								sprintf(logging.http_status, "%d", http_status_list[HTTP_STATUS_RANGE_NOT_SATISFIABLE].code);
 							}	
 							
 						} else { /* CGI needs to be processed */
@@ -377,13 +429,20 @@ int handle_client(int sd, char* root_dir)
 							if (cgi_result != NULL) { /* Succesful execution */
 								res.body = cgi_result;
 								res.status = HTTP_STATUS_OK;
+								sprintf(logging.http_status, "%d", http_status_list[HTTP_STATUS_OK].code);
 							} else {
 								res.status = HTTP_STATUS_INTERNAL_SERVER_ERROR;
+								sprintf(logging.http_status, "%d", http_status_list[HTTP_STATUS_INTERNAL_SERVER_ERROR].code);
 							}
 							// directly write status to socket and exit
 							err = send_response(&res, sd);
 							if ( err < 0 ) {
 								safe_printf("Failed to send the response (403): %d\n", err);
+							}
+							
+							err = write_log(logging, log_fd);
+							if ( err < 0 ) {
+								err_print("Failed to print logging information.");
 							}
 							return 0;
 							
@@ -392,15 +451,31 @@ int handle_client(int sd, char* root_dir)
 					}else{ /* else of last_modified of the resource */ 
 						// dont send the ressource, just 304 not modified
 						res.status = HTTP_STATUS_NOT_MODIFIED;
+						sprintf(logging.http_status, "%d", http_status_list[HTTP_STATUS_NOT_MODIFIED].code);
+						// directly write status to socket and exit
+						err = send_response(&res, sd);
+						if ( err < 0 ) {
+							safe_printf("Failed to send the response (403): %d\n", err);
+						}
+						err = write_log(logging, log_fd);
+						if ( err < 0 ) {
+							err_print("Failed to print logging information.");
+						}
+						return 0;
 					}
 				
 				}else{ /* else of file not accessible */
 					// resource is not accessible - return 403 - forbidden
 					res.status = HTTP_STATUS_FORBIDDEN;
+					sprintf(logging.http_status, "%d", http_status_list[HTTP_STATUS_FORBIDDEN].code);
 					// directly write status to socket and exit
 					err = send_response(&res, sd);
 					if ( err < 0 ) {
 						safe_printf("Failed to send the response (403): %d\n", err);
+					}
+					err = write_log(logging, log_fd);
+					if ( err < 0 ) {
+						err_print("Failed to print logging information.");
 					}
 					return 0;
 				} /* endif file accessible */
@@ -408,10 +483,15 @@ int handle_client(int sd, char* root_dir)
 			}else{
 				// resource doesn't exist - return 404 - not found
 				res.status = HTTP_STATUS_NOT_FOUND;
+				sprintf(logging.http_status, "%d", http_status_list[HTTP_STATUS_NOT_FOUND].code);
 				// directly write status to socket and exit
 				err = send_response(&res, sd);
 				if ( err < 0 ) {
 					safe_printf("Failed to send the response (404): %d\n", err);
+				}
+				err = write_log(logging, log_fd);
+				if ( err < 0 ) {
+					err_print("Failed to print logging information.");
 				}
 				return 0;
 			}/* endif file exists */
@@ -419,6 +499,7 @@ int handle_client(int sd, char* root_dir)
 		}else{ /* else of check if directory */
 			// requested resource is a directory - respond 301
 			res.status = HTTP_STATUS_MOVED_PERMANENTLY;
+			sprintf(logging.http_status, "%d", http_status_list[HTTP_STATUS_MOVED_PERMANENTLY].code);
 			// write path an add slash
 			strcat(path, "/\n\0");
 			res.location = path;
@@ -427,16 +508,25 @@ int handle_client(int sd, char* root_dir)
 			if ( err < 0 ) {
 				safe_printf("Failed to send the response (301): %d\n", err);
 			}
+			err = write_log(logging, log_fd);
+			if ( err < 0 ) {
+				err_print("Failed to print logging information.");
+			}
 			return 0;
 		}	
 		
 	}else{ /* else of check http method */
 		// return status 501 - not implemented
 		res.status = HTTP_STATUS_NOT_IMPLEMENTED;
+		sprintf(logging.http_status, "%d", http_status_list[HTTP_STATUS_NOT_IMPLEMENTED].code);
 		// directly write status to socket and exit
 		err = send_response(&res, sd);
 		if ( err < 0 ) {
 			safe_printf("Failed to send the response (501): %d\n", err);
+		}
+		err = write_log(logging, log_fd);
+		if ( err < 0 ) {
+			err_print("Failed to print logging information.");
 		}
 		return 0;
 	} /* endif GET HEAD */
@@ -457,6 +547,14 @@ int handle_client(int sd, char* root_dir)
 	} else {
 		err_print("Failed to send response header!");
  	}
+	
+	
+	
+	err = write_log(logging, log_fd);
+	if ( err < 0 ) {
+		err_print("Failed to print logging information.");
+	}
+	
 	return 0;
 }
 
