@@ -50,9 +50,14 @@ static volatile sig_atomic_t server_running = false;
 
 #define IS_ROOT_DIR(mode)   (S_ISDIR(mode) && ((S_IROTH || S_IXOTH) & (mode)))
 
-//
-// TODO: Include your function header here
-//
+/*
+ * function:		sig_handler
+ * purpose:			detect signals and treat them individually
+ * IN:				int sig - signal code
+ * OUT:				-
+ * globals used:	server_running
+ * return value:	-
+*/
 static void
 sig_handler(int sig)
 {
@@ -82,20 +87,34 @@ sig_handler(int sig)
 } /* end of sig_handler */
 
 
-//
-// TODO: Include your function header here
-//
+/*
+ * function:		print_usage
+ * purpose:			prints out a quick help
+ * IN:				const char *progname - name of this program to print out
+ * OUT:				-
+ * globals used:	-
+ * return value:	-
+*/
 static void
 print_usage(const char *progname)
 {
-  fprintf(stderr, "Usage: %s options\n", progname);
-  // TODO: Print the program options
+  fprintf(stderr, "Usage: %s options\n" \
+                  " -p port \t defines local port on which the server accept requests\n" \
+                  " -f file \t the file where logs will be written in (type \"-\" for stdout\n" \
+                  " -d dir \t ?? \n" \
+                  " -h \t\t prints out this quick help\n", progname);
 } /* end of print_usage */
 
 
-//
-// TODO: Include your function header here
-//
+/*
+ * function:		get_options
+ * purpose:			read program parameters and process each
+ * IN:				int argc - number of arguments
+ * 					char *argv[] - array with parameters
+ * OUT:				prog_options_t *opt - struct with information of program options
+ * globals used:	-
+ * return value:	return 0 if something went wrong
+*/
 static int
 get_options(int argc, char *argv[], prog_options_t *opt)
 {
@@ -192,7 +211,14 @@ get_options(int argc, char *argv[], prog_options_t *opt)
     return success;
 } /* end of get_options */
 
-
+/*
+ * function:		open_logfile
+ * purpose:			trys to open a log file and redirect to stdout
+ * IN:				prog_options_t *opt - struct with program information
+ * OUT:				-
+ * globals used:	-
+ * return value:	-
+*/
 static void
 open_logfile(prog_options_t *opt)
 {
@@ -209,7 +235,14 @@ open_logfile(prog_options_t *opt)
     } /* end if */
 } /* end of open_logfile */
 
-
+/*
+ * function:		check_root_dir
+ * purpose:			checks existance and accessibility of the root directory
+ * IN:				prog_options_t *opt - struct with program information
+ * OUT:				-
+ * globals used:	-
+ * return value:	-
+*/
 static void
 check_root_dir(prog_options_t *opt)
 {
@@ -226,17 +259,25 @@ check_root_dir(prog_options_t *opt)
     } /* end if */
 } /* end of check_root_dir */
 
-
+/*
+ * function:		install_signal_handlers
+ * purpose:			define useful signal handlers 
+ * IN:				-
+ * OUT:				-
+ * globals used:	-
+ * return value:	-
+*/
 static void
 install_signal_handlers(void)
 {
     struct sigaction sa;
 
     // init signal handler(s)
-    // TODO: add other signals
     sa.sa_flags = 0;
     sigemptyset(&sa.sa_mask);
     sa.sa_handler = sig_handler;
+    
+    // add SIGINT
     if(sigaction(SIGINT, &sa, NULL) < 0) {
         perror("sigaction(SIGINT)");
         exit(EXIT_FAILURE);
@@ -247,6 +288,7 @@ install_signal_handlers(void)
         perror("sigaction(SIGCHLD)");
         //exit(EXIT_FAILURE);
     } /* end if */
+    
     // add SIGSEGV
     if(sigaction(SIGSEGV, &sa, NULL) < 0) {
         perror("sigaction(SIGSEGV)");
@@ -260,7 +302,16 @@ install_signal_handlers(void)
     } /* end if */
 } /* end of install_signal_handlers */
 
-
+/*
+ * function:		main
+ * purpose:			main routine to enter the program,
+ *					fork requests into child processes and proceed
+ * IN:				int argc - number of arguments
+ * 					char *argv[] - array of argument strings
+ * OUT:				-
+ * globals used:	server_running
+ * return value:	int - program status
+*/
 int
 main(int argc, char *argv[])
 {
